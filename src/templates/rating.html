@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Rate Your Rides</title>
+  <meta charset="utf-8"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, sans-serif; background: #f5f5f5; color: #222; }
+
+    .container { max-width: 900px; margin: 0 auto; padding: 24px; }
+
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .header h1 { font-size: 20px; font-weight: 700; }
+    .progress { font-size: 14px; color: #888; }
+
+    .card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden; }
+
+    #map { height: 400px; width: 100%; }
+
+    .info { padding: 20px; }
+    .ride-name { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+    .ride-date { font-size: 13px; color: #888; margin-bottom: 16px; }
+
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+    .stat { background: #f9f9f9; border-radius: 8px; padding: 12px; text-align: center; }
+    .stat-value { font-size: 20px; font-weight: 700; color: #fc4c02; }
+    .stat-label { font-size: 11px; color: #888; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    .rating-section { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+    .rating-label { font-size: 14px; font-weight: 600; }
+    .stars { display: flex; gap: 6px; flex-wrap: wrap; }
+    .star {
+      font-size: 14px; font-weight: 600;
+      cursor: pointer;
+      padding: 8px 12px;
+      border-radius: 6px;
+      background: #eee;
+      color: #444;
+      transition: background 0.15s, color 0.15s;
+      user-select: none;
+    }
+    .star:hover, .star.active { background: #fc4c02; color: white; }
+
+    .nav { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; }
+    .btn { padding: 10px 24px; border-radius: 8px; border: none; cursor: pointer; font-size: 14px; font-weight: 600; }
+    .btn-primary { background: #fc4c02; color: white; }
+    .btn-secondary { background: #eee; color: #444; }
+    .btn:disabled { opacity: 0.4; cursor: default; }
+
+    .rated-badge { font-size: 12px; color: #888; }
+    .rated-count { color: #fc4c02; font-weight: 700; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>🚴 Rate Your Rides</h1>
+    <div class="progress">
+      <span class="rated-count" id="rated-count">0</span> / <span id="total-count">0</span> rated
+    </div>
+  </div>
+
+  <div class="card">
+    <div id="map"></div>
+    <div class="info">
+      <div class="ride-name" id="ride-name"></div>
+      <div class="ride-date" id="ride-date"></div>
+      <div class="stats">
+        <div class="stat"><div class="stat-value" id="stat-dist">--</div><div class="stat-label">Miles</div></div>
+        <div class="stat"><div class="stat-value" id="stat-elev">--</div><div class="stat-label">Elevation ft</div></div>
+        <div class="stat"><div class="stat-value" id="stat-time">--</div><div class="stat-label">Moving Time</div></div>
+        <div class="stat"><div class="stat-value" id="stat-speed">--</div><div class="stat-label">Avg Speed mph</div></div>
+      </div>
+      <div class="rating-section">
+        <div class="rating-label">Your Rating:</div>
+        <div class="stars" id="stars">
+          <span class="star" data-val="1">1</span>
+          <span class="star" data-val="2">2</span>
+          <span class="star" data-val="3">3</span>
+          <span class="star" data-val="4">4</span>
+          <span class="star" data-val="5">5</span>
+          <span class="star" data-val="6">6</span>
+          <span class="star" data-val="7">7</span>
+          <span class="star" data-val="8">8</span>
+          <span class="star" data-val="9">9</span>
+          <span class="star" data-val="10">10</span>
+        </div>
+        <div class="rated-badge" id="saved-badge"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="nav">
+    <button class="btn btn-secondary" id="btn-prev" onclick="navigate(-1)">← Previous</button>
+    <span style="font-size:13px; color:#888;" id="ride-index"></span>
+    <button class="btn btn-primary" id="btn-next" onclick="navigate(1)">Next →</button>
+  </div>
+</div>
+
+<script>
+  let rides = [];
+  let currentIndex = 0;
+  let currentRating = 0;
+  let map = null;
+  let routeLayer = null;
+
+  async function init() {
+    const resp = await fetch('/api/rides');
+    rides = await resp.json();
+    document.getElementById('total-count').textContent = rides.length;
+    const rated = rides.filter(r => r.rating).length;
+    document.getElementById('rated-count').textContent = rated;
+    initMap();
+    showRide(0);
+  }
+
+  function initMap() {
+    map = L.map('map');
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+  }
+
+  function decodePolyline(encoded) {
+    let points = [];
+    let index = 0, lat = 0, lng = 0;
+    while (index < encoded.length) {
+      let b, shift = 0, result = 0;
+      do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+      lat += (result & 1) ? ~(result >> 1) : (result >> 1);
+      shift = 0; result = 0;
+      do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+      lng += (result & 1) ? ~(result >> 1) : (result >> 1);
+      points.push([lat / 1e5, lng / 1e5]);
+    }
+    return points;
+  }
+
+  function showRide(index) {
+    const ride = rides[index];
+    currentRating = ride.rating || 0;
+
+    document.getElementById('ride-name').textContent  = ride.name;
+    document.getElementById('ride-date').textContent  = new Date(ride.date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    document.getElementById('stat-dist').textContent  = ride.distance_mi;
+    document.getElementById('stat-elev').textContent  = (ride.elevation_ft || 0).toLocaleString();
+    document.getElementById('stat-time').textContent  = formatTime(ride.moving_time_min);
+    document.getElementById('stat-speed').textContent = ride.avg_speed_mph;
+    document.getElementById('ride-index').textContent = `Ride ${index + 1} of ${rides.length}`;
+    document.getElementById('saved-badge').textContent = ride.rating ? `Saved: ${ride.rating}/10` : '';
+
+    updateButtons(currentRating);
+
+    if (routeLayer) map.removeLayer(routeLayer);
+    if (ride.polyline) {
+      const points = decodePolyline(ride.polyline);
+      routeLayer = L.polyline(points, { color: '#fc4c02', weight: 3 }).addTo(map);
+      map.fitBounds(routeLayer.getBounds(), { padding: [20, 20] });
+    } else {
+      map.setView([41.6611, -91.5302], 12);
+    }
+
+    document.getElementById('btn-prev').disabled = index === 0;
+    document.getElementById('btn-next').disabled = index === rides.length - 1;
+  }
+
+  function formatTime(mins) {
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+  }
+
+  function updateButtons(val) {
+    document.querySelectorAll('.star').forEach(s => {
+      s.classList.toggle('active', parseInt(s.dataset.val) === val);
+    });
+  }
+
+  function navigate(dir) {
+    currentIndex = Math.max(0, Math.min(rides.length - 1, currentIndex + dir));
+    showRide(currentIndex);
+  }
+
+  document.getElementById('stars').addEventListener('click', async (e) => {
+    if (!e.target.classList.contains('star')) return;
+    const val = parseInt(e.target.dataset.val);
+    currentRating = val;
+    updateButtons(val);
+
+    const ride = rides[currentIndex];
+    ride.rating = val;
+
+    const resp = await fetch('/rate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: ride.id, rating: val })
+    });
+    const data = await resp.json();
+    document.getElementById('rated-count').textContent = data.rated_count;
+    document.getElementById('saved-badge').textContent = `Saved: ${val}/10`;
+  });
+
+  init();
+</script>
+</body>
+</html><!DOCTYPE html>
+<html>
+<head>
+  <title>Rate Your Rides</title>
+  <meta charset="utf-8"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, sans-serif; background: #f5f5f5; color: #222; }
+
+    .container { max-width: 900px; margin: 0 auto; padding: 24px; }
+
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .header h1 { font-size: 20px; font-weight: 700; }
+    .progress { font-size: 14px; color: #888; }
+
+    .card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden; }
+
+    #map { height: 400px; width: 100%; }
+
+    .info { padding: 20px; }
+    .ride-name { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+    .ride-date { font-size: 13px; color: #888; margin-bottom: 16px; }
+
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+    .stat { background: #f9f9f9; border-radius: 8px; padding: 12px; text-align: center; }
+    .stat-value { font-size: 20px; font-weight: 700; color: #fc4c02; }
+    .stat-label { font-size: 11px; color: #888; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    .rating-section { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+    .rating-label { font-size: 14px; font-weight: 600; }
+    .stars { display: flex; gap: 6px; flex-wrap: wrap; }
+    .star {
+      font-size: 14px; font-weight: 600;
+      cursor: pointer;
+      padding: 8px 12px;
+      border-radius: 6px;
+      background: #eee;
+      color: #444;
+      transition: background 0.15s, color 0.15s;
+      user-select: none;
+    }
+    .star:hover, .star.active { background: #fc4c02; color: white; }
+
+    .nav { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; }
+    .btn { padding: 10px 24px; border-radius: 8px; border: none; cursor: pointer; font-size: 14px; font-weight: 600; }
+    .btn-primary { background: #fc4c02; color: white; }
+    .btn-secondary { background: #eee; color: #444; }
+    .btn:disabled { opacity: 0.4; cursor: default; }
+
+    .rated-badge { font-size: 12px; color: #888; }
+    .rated-count { color: #fc4c02; font-weight: 700; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>🚴 Rate Your Rides</h1>
+    <div class="progress">
+      <span class="rated-count" id="rated-count">0</span> / <span id="total-count">0</span> rated
+    </div>
+    <a href="/feedback" style="font-size:13px; color:#fc4c02; text-decoration:none; font-weight:600;">
+        Rate Generated Routes →
+      </a>
+  </div>
+
+  <div class="card">
+    <div id="map"></div>
+    <div class="info">
+      <div class="ride-name" id="ride-name"></div>
+      <div class="ride-date" id="ride-date"></div>
+      <div class="stats">
+        <div class="stat"><div class="stat-value" id="stat-dist">--</div><div class="stat-label">Miles</div></div>
+        <div class="stat"><div class="stat-value" id="stat-elev">--</div><div class="stat-label">Elevation ft</div></div>
+        <div class="stat"><div class="stat-value" id="stat-time">--</div><div class="stat-label">Moving Time</div></div>
+        <div class="stat"><div class="stat-value" id="stat-speed">--</div><div class="stat-label">Avg Speed mph</div></div>
+      </div>
+      <div class="rating-section">
+        <div class="rating-label">Your Rating:</div>
+        <div class="stars" id="stars">
+          <span class="star" data-val="1">1</span>
+          <span class="star" data-val="2">2</span>
+          <span class="star" data-val="3">3</span>
+          <span class="star" data-val="4">4</span>
+          <span class="star" data-val="5">5</span>
+          <span class="star" data-val="6">6</span>
+          <span class="star" data-val="7">7</span>
+          <span class="star" data-val="8">8</span>
+          <span class="star" data-val="9">9</span>
+          <span class="star" data-val="10">10</span>
+        </div>
+        <div class="rated-badge" id="saved-badge"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="nav">
+    <button class="btn btn-secondary" id="btn-prev" onclick="navigate(-1)">← Previous</button>
+    <span style="font-size:13px; color:#888;" id="ride-index"></span>
+    <button class="btn btn-primary" id="btn-next" onclick="navigate(1)">Next →</button>
+  </div>
+</div>
+
+<script>
+  let rides = [];
+  let currentIndex = 0;
+  let currentRating = 0;
+  let map = null;
+  let routeLayer = null;
+
+  async function init() {
+    const resp = await fetch('/api/rides');
+    rides = await resp.json();
+    document.getElementById('total-count').textContent = rides.length;
+    const rated = rides.filter(r => r.rating).length;
+    document.getElementById('rated-count').textContent = rated;
+    initMap();
+    showRide(0);
+  }
+
+  function initMap() {
+    map = L.map('map');
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+  }
+
+  function decodePolyline(encoded) {
+    let points = [];
+    let index = 0, lat = 0, lng = 0;
+    while (index < encoded.length) {
+      let b, shift = 0, result = 0;
+      do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+      lat += (result & 1) ? ~(result >> 1) : (result >> 1);
+      shift = 0; result = 0;
+      do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+      lng += (result & 1) ? ~(result >> 1) : (result >> 1);
+      points.push([lat / 1e5, lng / 1e5]);
+    }
+    return points;
+  }
+
+  function showRide(index) {
+    const ride = rides[index];
+    currentRating = ride.rating || 0;
+
+    document.getElementById('ride-name').textContent  = ride.name;
+    document.getElementById('ride-date').textContent  = new Date(ride.date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    document.getElementById('stat-dist').textContent  = ride.distance_mi;
+    document.getElementById('stat-elev').textContent  = (ride.elevation_ft || 0).toLocaleString();
+    document.getElementById('stat-time').textContent  = formatTime(ride.moving_time_min);
+    document.getElementById('stat-speed').textContent = ride.avg_speed_mph;
+    document.getElementById('ride-index').textContent = `Ride ${index + 1} of ${rides.length}`;
+    document.getElementById('saved-badge').textContent = ride.rating ? `Saved: ${ride.rating}/10` : '';
+
+    updateButtons(currentRating);
+
+    if (routeLayer) map.removeLayer(routeLayer);
+    if (ride.polyline) {
+      const points = decodePolyline(ride.polyline);
+      routeLayer = L.polyline(points, { color: '#fc4c02', weight: 3 }).addTo(map);
+      map.fitBounds(routeLayer.getBounds(), { padding: [20, 20] });
+    } else {
+      map.setView([41.6611, -91.5302], 12);
+    }
+
+    document.getElementById('btn-prev').disabled = index === 0;
+    document.getElementById('btn-next').disabled = index === rides.length - 1;
+  }
+
+  function formatTime(mins) {
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+  }
+
+  function updateButtons(val) {
+    document.querySelectorAll('.star').forEach(s => {
+      s.classList.toggle('active', parseInt(s.dataset.val) === val);
+    });
+  }
+
+  function navigate(dir) {
+    currentIndex = Math.max(0, Math.min(rides.length - 1, currentIndex + dir));
+    showRide(currentIndex);
+  }
+
+  document.getElementById('stars').addEventListener('click', async (e) => {
+    if (!e.target.classList.contains('star')) return;
+    const val = parseInt(e.target.dataset.val);
+    currentRating = val;
+    updateButtons(val);
+
+    const ride = rides[currentIndex];
+    ride.rating = val;
+
+    const resp = await fetch('/rate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: ride.id, rating: val })
+    });
+    const data = await resp.json();
+    document.getElementById('rated-count').textContent = data.rated_count;
+    document.getElementById('saved-badge').textContent = `Saved: ${val}/10`;
+  });
+
+  init();
+</script>
+</body>
+</html>
