@@ -2,3 +2,6 @@ config/
 cache/
 output/
 routes/
+data/
+src/__pycache__
+NRIS_CR_Standards_Public.gdb
