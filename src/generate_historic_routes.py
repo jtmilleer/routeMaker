@@ -95,7 +95,11 @@ def add_elevation_to_graph(G):
             if completed % 1000 == 0:
                 print(f"  {completed}/{total} nodes done...")
 
-    missing = sum(1 for n in G.nodes if G.nodes[n].get("elevation") is None)
+    missing = 0
+    for n in G.nodes:
+        if G.nodes[n].get("elevation") is None:
+            G.nodes[n]["elevation"] = 0.0
+            missing += 1
     print(f"Done. Missing: {missing}/{total}")
     return G
 
@@ -135,9 +139,9 @@ def get_network():
 
     G = add_elevation_to_graph(G)
 
-    for node_id in G.nodes:
-        if G.nodes[node_id].get("elevation") is None:
-            G.nodes[node_id]["elevation"] = 0.0
+    # for node_id in G.nodes:
+        #if G.nodes[node_id].get("elevation") is None:
+            # G.nodes[node_id]["elevation"] = 0.0
 
     G = ox.add_edge_grades(G)
 
