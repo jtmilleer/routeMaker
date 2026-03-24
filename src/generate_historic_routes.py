@@ -113,11 +113,6 @@ def get_network():
     if os.path.exists(GRAPH_FILE):
         print("Loading cached road network...")
         G = ox.load_graphml(GRAPH_FILE)
-        # Fix disjoint components from cached graphs
-        if not nx.is_strongly_connected(G):
-            print("Filtering to largest strongly connected component...")
-            largest_scc = max(nx.strongly_connected_components(G), key=len)
-            G = G.subgraph(largest_scc).copy()
         print(f"Network loaded: {len(G.nodes)} nodes, {len(G.edges)} edges")
         return mark_hilly_edges(G)
 
@@ -145,6 +140,11 @@ def get_network():
             G.nodes[node_id]["elevation"] = 0.0
 
     G = ox.add_edge_grades(G)
+
+    # Filter to largest strongly connected component before saving
+    print("Filtering to largest strongly connected component...")
+    largest_scc = max(nx.strongly_connected_components(G), key=len)
+    G.remove_nodes_from(set(G.nodes) - largest_scc)
 
     ox.save_graphml(G, GRAPH_FILE)
     print(f"Network cached to {GRAPH_FILE}")
@@ -422,7 +422,7 @@ def encode_path_to_polyline(G, path):
 
 # ── Map visualization ─────────────────────────────────────────────────────────
 
-def show_routes_in_browser(G, results, valid_historic_nodes, top_n=5):
+def show_routes_in_browser(G, results, valid_historic_nodes, top_n=5, no_browser=False):
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     m = folium.Map(
         location=[START_LAT, START_LNG],
@@ -505,12 +505,28 @@ def show_routes_in_browser(G, results, valid_historic_nodes, top_n=5):
 
     map_file = os.path.join(OUTPUT_DIR, "top_historic_routes.html")
     m.save(map_file)
-    print(f"\nOpening map: {map_file}")
-    webbrowser.open(f"file:///{os.path.abspath(map_file)}")
+    if not no_browser:
+        print(f"\nOpening map: {map_file}")
+        webbrowser.open(f"file:///{os.path.abspath(map_file)}")
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
+import argparse
+
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--distance', type=float, default=TARGET_MILES)
+    parser.add_argument('--tolerance', type=float, default=TOLERANCE)
+    parser.add_argument('--hilly_factor', type=float, default=HILLY_FACTOR)
+    parser.add_argument('--downtown_radius', type=float, default=DOWNTOWN_RADIUS)
+    parser.add_argument('--no_browser', action='store_true')
+    args = parser.parse_args()
+
+    TARGET_MILES = args.distance
+    TOLERANCE = args.tolerance
+    HILLY_FACTOR = args.hilly_factor
+    DOWNTOWN_RADIUS = args.downtown_radius
+
     bundle     = load_model()
     G          = get_network()
     start_node = get_start_node(G)
@@ -600,5 +616,5 @@ if __name__ == "__main__":
         saved  = save_gpx(coords, historic_info, f"{name}.gpx", name)
         print(f"  Saved: {saved}")
 
-    show_routes_in_browser(G, results, valid_historic_nodes, top_n=5)
+    show_routes_in_browser(G, results, valid_historic_nodes, top_n=5, no_browser=args.no_browser)
     save_route_features(results, G)
