@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Route Maker Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar glass-panel">
+            <div class="sidebar-header">
+                <h1>Route<span class="highlight">Maker</span></h1>
+                <p>Advanced cycling AI routing</p>
+            </div>
+            
+            <form id="generate-form" class="config-form">
+                <div class="form-group">
+                    <label>Route Mode</label>
+                    <div class="mode-selector">
+                        <button type="button" class="mode-btn active" data-type="regular">Regular</button>
+                        <button type="button" class="mode-btn" data-type="hilly">Hilly</button>
+                        <button type="button" class="mode-btn" data-type="historic">Historic</button>
+                        <button type="button" class="mode-btn" data-type="novel">Novel</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="distance">Target Distance (Miles): <span id="dist-val" class="highlight">35</span></label>
+                    <input type="range" id="distance" min="10" max="100" value="35" step="1">
+                </div>
+
+                <div class="form-group">
+                    <label for="tolerance">Tolerance Length: <span id="tol-val" class="highlight">25%</span></label>
+                    <input type="range" id="tolerance" min="0.05" max="0.5" value="0.25" step="0.05">
+                </div>
+
+                <div id="hilly-options" class="form-group contextual-group hidden">
+                    <label for="hilly_factor">Hilly Factor: <span id="hilly-val" class="highlight">100</span></label>
+                    <input type="range" id="hilly_factor" min="0" max="250" value="100" step="10">
+                </div>
+
+                <div id="historic-options" class="form-group contextual-group hidden">
+                    <label for="downtown_radius">Downtown Radius (meters): <span id="radius-val" class="highlight">1000</span></label>
+                    <input type="range" id="downtown_radius" min="500" max="5000" value="1000" step="100">
+                </div>
+
+                <div id="novel-options" class="form-group contextual-group hidden">
+                    <label for="novelty_factor">Novelty Factor: <span id="novel-val" class="highlight">5.0</span></label>
+                    <input type="range" id="novelty_factor" min="0.5" max="10.0" value="5.0" step="0.5">
+                </div>
+                
+                <button type="submit" class="generate-btn" id="generate-btn">
+                    <span class="btn-text">Generate Routes</span>
+                    <div class="spinner hidden" id="btn-spinner"></div>
+                </button>
+            </form>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div id="map-container" class="map-container glass-panel">
+                
+                <div class="idle-state" id="idle-state">
+                    <span class="idle-icon">🚴‍♂️</span>
+                    <h2>Ready to Explore</h2>
+                    <p>Configure parameters and hit generate to craft your perfect cycling loop.</p>
+                </div>
+                
+                <div class="loading-state hidden" id="loading-state">
+                    <div class="pulse-ring"></div>
+                    <h2>Crunching Algorithms</h2>
+                    <p>Scanning geographical topology and routing history. This takes up to 60 seconds depending on distance...</p>
+                </div>
+
+                <iframe id="map-frame" class="hidden" title="Generated Routes Map"></iframe>
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
