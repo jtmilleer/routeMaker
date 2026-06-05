@@ -1,0 +1,37 @@
+# LAYER: Infrastructure
+# PURPOSE: Python dependencies for the FastAPI backend.
+#          Pin major versions for reproducibility; minor updates are safe.
+
+# Web framework
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+
+# Database
+sqlalchemy[asyncio]>=2.0.50
+aiosqlite==0.20.0           # SQLite async driver (swap DATABASE_URL for postgres later)
+alembic==1.13.1             # Database migrations
+
+# Auth / security
+python-jose[cryptography]==3.3.0   # JWT
+passlib==1.7.4                     # Password hashing (not used now, here for future)
+python-multipart==0.0.9            # Form data (OAuth callbacks)
+
+# HTTP client
+httpx==0.27.0               # Async HTTP (Strava API calls)
+
+# ML / data
+scikit-learn>=1.4
+pandas>=2.1
+numpy>=1.26
+scipy>=1.11
+
+# Geospatial / routing
+osmnx==1.9.3
+networkx==3.3
+gpxpy==1.6.2
+polyline==2.0.2
+srtm==0.3.5
+
+# Utilities
+python-dotenv==1.0.1
+pydantic-settings==2.2.1

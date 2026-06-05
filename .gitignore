@@ -1,7 +1,31 @@
-config/
-cache/
-output/
-routes/
-data/
-src/__pycache__
-NRIS_CR_Standards_Public.gdb
+
+# ── Backend ───────────────────────────────────────────────────────────────────
+backend/.env
+backend/routemaker.db
+backend/data/graphs/
+backend/data/models/*.pkl
+backend/data/gpx/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/*.pyc
+
+# ── Frontend ──────────────────────────────────────────────────────────────────
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+
+# ── Python (existing) ─────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pkl
+data/graphs/
+data/srtm_cache/
+venv/
+.venv/
+*.egg-info/
+
+# ── OS / editor ───────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/settings.json
+*.log
