@@ -30,19 +30,31 @@ while True:
     except Exception as e:
         print(f"Error: {e}")
         break
-
+dsm_features = []
 print(f"Total features in IA: {len(all_features)}")
-ic_features = []
+for f in all_features:
+    attrs = f.get("attributes", {})
+    city = attrs.get("CITY") or ""
+    if "DES MOINES" in city.upper():
+        dsm_features.append(f)
+
+print(f"Total features in Des Moines: {len(dsm_features)}")
+
+
+
+#ic_features = []
+"""
 for f in all_features:
     attrs = f.get("attributes", {})
     city = attrs.get("CITY") or ""
     if "IOWA CITY" in city.upper():
         ic_features.append(f)
+"""
 
-print(f"Total features in Iowa City: {len(ic_features)}")
+#print(f"Total features in Iowa City: {len(ic_features)}")
 
 rows = []
-for f in ic_features:
+for f in dsm_features:
     attrs = f.get("attributes", {})
     geom = f.get("geometry", {})
     x = geom.get("x")
@@ -55,6 +67,6 @@ for f in ic_features:
         })
 
 df = pd.DataFrame(rows)
-out_path = os.path.join(DATA_DIR, "iowa_city_historic_sites.csv")
+out_path = os.path.join(DATA_DIR, "des_moines_historic_sites.csv")
 df.to_csv(out_path, index=False)
 print(f"Saved {len(df)} historic sites to {out_path}")
