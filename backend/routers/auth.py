@@ -3,6 +3,7 @@
 #          to get a redirect URL, Strava calls back to /auth/strava/callback,
 #          we issue a JWT and redirect Angular to /auth/callback with the token.
 
+import os
 import shutil
 import time
 from datetime import datetime, timezone
@@ -13,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.config import settings
 from backend.core.db import get_db
-from backend.core.security import create_access_token
+from backend.core.security import create_access_token, get_current_user
 from backend.models.db_models import StravaToken, User
 from backend.services import strava_service
 from backend.services.model_service import user_model_path
@@ -87,8 +88,8 @@ async def strava_callback(code: str, db: AsyncSession = Depends(get_db)):
 
     # Seed user's personal model from global baseline on first login
     model_path = user_model_path(athlete_id)
-    if not __import__("os").path.exists(model_path):
-        if __import__("os").path.exists(settings.global_baseline_path):
+    if not os.path.exists(model_path):
+        if os.path.exists(settings.global_baseline_path):
             shutil.copy2(settings.global_baseline_path, model_path)
 
     # Issue JWT and redirect to Angular
@@ -100,7 +101,7 @@ async def strava_callback(code: str, db: AsyncSession = Depends(get_db)):
 @router.get("/me")
 async def get_me(
     db: AsyncSession = Depends(get_db),
-    athlete_id: int = Depends(__import__("core.security", fromlist=["get_current_user"]).get_current_user),
+    athlete_id: int = Depends(get_current_user),
 ):
     """Return the current user's profile. Angular calls this on app load to verify the JWT."""
     user = await db.get(User, athlete_id)

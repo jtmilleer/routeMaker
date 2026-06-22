@@ -9,11 +9,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.core.config import settings
-from backend.core.db import engine, Base
+from backend.core.db import create_tables
 from backend.models import db_models  # noqa
 from backend.routers import auth, routes, rides, ratings, graph
-from backend.services.graph_service import graph_service
-from backend.services.model_service import model_service
+from backend.services.graph_service import seed_preset_cities
 
 app = FastAPI(
     title="RouteMaker API",

@@ -7,6 +7,7 @@
 import { Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
+import { firstValueFrom, timeout } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 export interface UserProfile {
@@ -36,12 +37,16 @@ export class AuthService {
       return;
     }
     try {
-      const user = await this.http
-        .get<UserProfile>(`${environment.apiUrl}/auth/me`)
-        .toPromise();
+      const user = await firstValueFrom(
+        this.http.get<UserProfile>(`${environment.apiUrl}/auth/me`).pipe(
+          timeout(3000)  // Give up after 3s if backend is unreachable
+        )
+      );
       this.currentUser.set(user ?? null);
     } catch {
-      this.logout();
+      // Token expired, invalid, or backend unreachable — clear and continue
+      localStorage.removeItem('rm_jwt');
+      this.currentUser.set(null);
     } finally {
       this.isLoading.set(false);
     }
@@ -49,9 +54,9 @@ export class AuthService {
 
   /** Redirect browser to Strava OAuth — backend handles the rest. */
   async login(): Promise<void> {
-    const resp = await this.http
-      .get<{ url: string }>(`${environment.apiUrl}/auth/strava/init`)
-      .toPromise();
+    const resp = await firstValueFrom(
+      this.http.get<{ url: string }>(`${environment.apiUrl}/auth/strava/init`)
+    );
     if (resp?.url) {
       window.location.href = resp.url;
     }

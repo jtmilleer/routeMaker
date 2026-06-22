@@ -1,97 +1,106 @@
 # RouteMaker
 
-RouteMaker is a personalized AI-powered cycling route generator. It creates customized routes (lollipop loops, hilly climbs, historic tours, and novel roads) tailored to your specific riding preferences. It learns from your Strava activity history and ratings using a personalized Machine Learning model.
+Cycling route generator that connects to your Strava account and builds personalized routes using a road network graph and a per-user ML model trained on your own ride ratings.
 
-## Architecture
+Started as a collection of Python scripts for generating routes around Iowa City. Now has a full web UI (Angular + FastAPI) so you can pick a starting point on a map, choose a route type, and get back GPX files ranked by how much the model thinks you'll enjoy them.
 
-RouteMaker is a full-stack application built with:
-- **Frontend:** Angular 17, Leaflet (Map UI)
-- **Backend:** Python FastAPI, SQLAlchemy (SQLite)
-- **Data/ML:** Scikit-learn, OSMnx, NetworkX
+## How it works
 
-## Prerequisites
+1. You log in with Strava. The app imports your ride history.
+2. You rate rides on a 1-10 scale. These ratings train a personal GradientBoostingRegressor model (scikit-learn).
+3. When you generate routes, the backend loads an OpenStreetMap road network graph (via OSMnx), runs A* pathfinding to build lollipop loops near your target distance, scores each candidate with your model, and returns the top 5.
+4. After you ride a generated route, you rate it too. Every 10 ratings, the model retrains automatically in the background.
 
-To run this project locally, you will need:
-1. **Python 3.10+** (Tested with Python 3.13)
-2. **Node.js** (v20+ recommended)
-3. A **Strava API Application**. You can create one at [https://www.strava.com/settings/api](https://www.strava.com/settings/api).
-   - Set the **Authorization Callback Domain** to `localhost`
+**Route types:**
+- **Regular** -- standard loops, scored by your model
+- **Hilly** -- routing weights favor roads with steeper grades
+- **Historic** -- biases toward roads you've ridden frequently (your comfort roads)
+- **Novel** -- penalizes roads you've already ridden so you explore new ones
 
-## 1. Environment Setup
+Road network graphs are cached per-city and shared across users. Building a new city graph from scratch takes 5-15 minutes (downloads OSM data, strips highways, adds SRTM elevation to every node, computes edge grades, extracts the largest connected component). Iowa City, Madison, and Des Moines are pre-seeded.
 
-### Configure the Backend
-Navigate to the `backend` directory and copy the environment template:
-```bash
-cd backend
-cp .env.example .env
+## Stack
+
+- **Frontend:** Angular 22, Leaflet, TypeScript
+- **Backend:** Python, FastAPI, SQLAlchemy (async), SQLite
+- **ML:** scikit-learn (GradientBoostingRegressor + StandardScaler per user)
+- **Geo:** OSMnx, NetworkX, SRTM elevation data, KDTree spatial indexing
+- **Auth:** Strava OAuth2 + JWT
+
+## Setup
+
+**Requirements:** Python 3.10+, Node.js v20+, a [Strava API app](https://www.strava.com/settings/api) with callback domain set to `localhost`.
+
 ```
-*(On Windows PowerShell, use `Copy-Item .env.example .env`)*
+git clone <this repo>
+cd routeMaker
+```
 
-Open the new `.env` file and fill in your Strava credentials:
+Create `backend/.env` from the example and fill in your Strava credentials:
+
+```
+cp backend/.env.example backend/.env
+```
+
 ```env
-# Strava OAuth
-STRAVA_CLIENT_ID=your_client_id_here
-STRAVA_CLIENT_SECRET=your_client_secret_here
-
-# JWT Security
-# Generate a random string for this (e.g., using `openssl rand -hex 32`)
-JWT_SECRET=your_secure_random_string
-
-# For testing, you must put your Strava Athlete ID here to allow login.
-# Leave blank to allow anyone (not recommended for public exposure).
-ALLOWED_ATHLETE_IDS=your_athlete_id
+STRAVA_CLIENT_ID=your_client_id
+STRAVA_CLIENT_SECRET=your_client_secret
+JWT_SECRET=any_long_random_string
 ```
 
-## 2. Running the Backend
+Install dependencies:
 
-The backend runs on FastAPI and handles route generation, ML training, and database management.
-
-Open a terminal in the root project directory:
-
-```powershell
-# 1. Set the PYTHONPATH so module imports work correctly
-$env:PYTHONPATH = (Get-Location).Path
-
-# 2. Navigate to the backend folder
+```
 cd backend
-
-# 3. Create a virtual environment
 python -m venv .venv
-
-# 4. Activate the virtual environment
-# On Windows:
-.\.venv\Scripts\activate
-# On Mac/Linux:
-# source .venv/bin/activate
-
-# 5. Install dependencies
+.venv\Scripts\Activate.ps1   # or source .venv/bin/activate on mac/linux
 pip install -r requirements.txt
+cd ..
 
-# 6. Start the development server
-uvicorn backend.main:app --host 127.0.0.1 --port 8000 --reload
+cd frontend
+npm install
+cd ..
 ```
 
-The backend should now be running at `http://127.0.0.1:8000`. It will automatically create the local SQLite database and necessary data directories on its first run.
+## Running
 
-## 3. Running the Frontend
+In two terminals from the project root:
 
-The frontend is an Angular application. Open a **second terminal window** in the root project directory.
+```
+# Terminal 1 - backend
+.\backend\.venv\Scripts\Activate.ps1   # or source backend/.venv/bin/activate
+python -m backend
 
-```powershell
-# 1. Navigate to the frontend folder
+# Terminal 2 - frontend
 cd frontend
-
-# 2. Install dependencies
-npm install
-
-# 3. Start the Angular development server
 npm start
 ```
 
-The frontend will start and automatically open in your browser at `http://localhost:4200`. 
-*Note: The Angular app is configured to automatically proxy all `/api` and `/auth` requests to the FastAPI backend running on port 8000.*
+Open `http://localhost:4200`. API docs at `http://localhost:8000/docs`.
 
-## Troubleshooting
+## Project layout
 
-- **ModuleNotFoundError: No module named 'backend'**: Ensure you set the `PYTHONPATH` variable in your terminal before running `uvicorn`, or ensure you are running `uvicorn backend.main:app` from the root project directory (not inside the `backend` directory itself).
-- **Graph Building takes a long time**: The first time you request a custom location, the backend downloads the road network from OpenStreetMap. This can take 30-60 seconds depending on the radius. Subsequent requests in the same city are cached.
+```
+backend/
+  main.py              # FastAPI app, CORS, startup (table creation, graph seeding)
+  core/                # config (pydantic-settings), db engine, JWT security
+  models/              # SQLAlchemy ORM models, Pydantic request/response schemas
+  routers/             # auth (Strava OAuth), routes, rides, ratings, graph
+  services/
+    graph_service.py   # OSMnx graph download/cache/spatial index, ridden-edge marking
+    model_service.py   # per-user .pkl model loading, prediction, retraining
+    strava_service.py  # all Strava API calls, token refresh
+frontend/
+  src/app/
+    features/          # landing, route-builder, rate-rides, rate-generated
+    core/              # auth service, route API/state services, guards, interceptors
+    shared/            # city selector, map building banner, loading overlay
+src/                   # original CLI scripts (generate_routes.py, train_model.py, etc.)
+```
+
+## Notes
+
+- Per-user models live in `backend/data/models/`. New users start with a copy of the global baseline model.
+- Road network graphs are in `backend/data/graphs/` (~100MB+ per city as graphml). They're shared across users.
+- Switch to Postgres by changing `DATABASE_URL` in `.env` to `postgresql+asyncpg://...` -- no code changes needed.
+- The `src/` directory has the original standalone Python scripts that this project grew out of.

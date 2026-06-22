@@ -16,7 +16,7 @@ from backend.core.db import get_db
 from backend.core.security import get_current_user
 from backend.models.db_models import GeneratedRoute, Ride
 from backend.models.schemas import GenerateRequest, RouteResult
-from backend.services import graph_service, model_service, route_service, strava_service
+from backend.services import graph_service, model_service, strava_service
 
 router = APIRouter(prefix="/api/routes", tags=["routes"])
 _executor = ThreadPoolExecutor(max_workers=4)

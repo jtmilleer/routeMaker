@@ -53,6 +53,6 @@ async def get_db() -> AsyncSession:
 async def create_tables():
     """Create all tables defined in ORM models. Called once on app startup."""
     # Import models here to ensure they are registered with Base before create_all
-    import models.db_models  # noqa: F401
+    import backend.models.db_models  # noqa: F401
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

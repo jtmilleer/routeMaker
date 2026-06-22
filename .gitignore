@@ -1,31 +1,51 @@
-
-# ── Backend ───────────────────────────────────────────────────────────────────
+# Credentials and secrets
 backend/.env
-backend/routemaker.db
-backend/data/graphs/
-backend/data/models/*.pkl
-backend/data/gpx/
-backend/__pycache__/
-backend/**/__pycache__/
-backend/*.pyc
+config/.env
+config/strava_token.json
 
-# ── Frontend ──────────────────────────────────────────────────────────────────
+# Databases
+*.db
+
+# Python
+__pycache__/
+*.py[cod]
+*.pkl
+*.egg-info/
+.venv/
+venv/
+
+# ML models and data
+data/graphs/
+data/models/
+data/srtm/
+data/srtm_cache/
+data/iowa_city_network.graphml
+backend/data/
+
+# Cache (OSMnx, geocode, etc.)
+cache/
+src/cache/
+backend/cache/
+
+# Generated route output
+routes/
+output/
+
+# Geodatabase (NRIS historic sites data -- too large for git)
+NRIS_CR_Standards_Public.gdb/
+
+# Personal ride data
+data/my_rides.csv
+data/my_ratings.csv
+data/feedback_ratings.csv
+data/generated_routes.csv
+
+# Frontend
 frontend/node_modules/
 frontend/dist/
 frontend/.angular/
 
-# ── Python (existing) ─────────────────────────────────────────────────────────
-__pycache__/
-*.py[cod]
-*.pkl
-data/graphs/
-data/srtm_cache/
-venv/
-.venv/
-*.egg-info/
-
-# ── OS / editor ───────────────────────────────────────────────────────────────
+# OS / editor
 .DS_Store
 Thumbs.db
-.vscode/settings.json
 *.log
