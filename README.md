@@ -29,7 +29,7 @@ Road network graphs are cached per-city and shared across users. Building a new 
 
 ## Setup
 
-**Requirements:** Python 3.10+, Node.js v20+, a [Strava API app](https://www.strava.com/settings/api) with callback domain set to `localhost`.
+**Requirements:** Python 3.12 or 3.13, Node.js v20+, a [Strava API app](https://www.strava.com/settings/api) with callback domain set to `localhost`.
 
 ```
 git clone <this repo>
@@ -52,7 +52,7 @@ Install dependencies:
 
 ```
 cd backend
-python -m venv .venv
+py -3.13 -m venv .venv       # must be 3.12 or 3.13 -- not 3.14
 .venv\Scripts\Activate.ps1   # or source .venv/bin/activate on mac/linux
 pip install -r requirements.txt
 cd ..

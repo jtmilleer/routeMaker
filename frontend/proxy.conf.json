@@ -5,7 +5,13 @@
     "changeOrigin": true,
     "logLevel": "info"
   },
-  "/auth": {
+  "/auth/strava": {
+    "target": "http://localhost:8000",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "info"
+  },
+  "/auth/me": {
     "target": "http://localhost:8000",
     "secure": false,
     "changeOrigin": true,

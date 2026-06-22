@@ -147,22 +147,18 @@ def _build_graph_blocking(lat: float, lng: float, key: str):
         G.remove_edges_from(edges_to_remove)
         _build_status[key]["progress_pct"] = 30
 
-        # Step 3: Edge speeds and travel times
-        G = ox.add_edge_speeds(G)
-        G = ox.add_edge_travel_times(G)
         _build_status[key]["progress_pct"] = 40
 
         # Step 4: Elevation via local SRTM tiles
         srtm_cache = os.path.join(settings.data_dir, "srtm_cache")
         os.makedirs(srtm_cache, exist_ok=True)
-        elevation_data = srtm.get_data(local_cache_dir=srtm_cache)
+        elevation_svc = srtm.SrtmService(srtm_cache)
         node_ids = list(G.nodes)
         total = len(node_ids)
-        for i, node_id in enumerate(node_ids):
-            n_lat = float(G.nodes[node_id]["y"])
-            n_lng = float(G.nodes[node_id]["x"])
-            elev = elevation_data.get_elevation(n_lat, n_lng)
-            G.nodes[node_id]["elevation"] = float(elev) if elev is not None else 0.0
+        coords = [(float(G.nodes[n]["y"]), float(G.nodes[n]["x"])) for n in node_ids]
+        elevations = elevation_svc.get_elevations_batch(coords)
+        for i, (node_id, elev) in enumerate(zip(node_ids, elevations)):
+            G.nodes[node_id]["elevation"] = elev if elev != srtm.VOID_VALUE else 0.0
             if i % 5000 == 0:
                 pct = 40 + int((i / total) * 40)
                 _build_status[key]["progress_pct"] = pct
@@ -186,11 +182,13 @@ def _build_graph_blocking(lat: float, lng: float, key: str):
             "status": "ready", "progress_pct": 100,
             "node_count": len(G.nodes), "edge_count": len(G.edges),
         }
+        print(f"[graph_service] Build complete for {key}: {len(G.nodes)} nodes, {len(G.edges)} edges")
 
     except Exception as e:
         _build_status[key] = {"status": "error", "progress_pct": 0,
                                "node_count": None, "edge_count": None,
                                "error": str(e)}
+        print(f"[graph_service] Build FAILED for {key}: {e}")
 
 
 # ── Startup seeding ───────────────────────────────────────────────────────────

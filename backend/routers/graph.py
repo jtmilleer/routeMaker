@@ -12,10 +12,7 @@ router = APIRouter(prefix="/api/graph", tags=["graph"])
 
 
 @router.get("/status/{city_key}", response_model=GraphStatusResponse)
-async def graph_status(
-    city_key: str,
-    _: int = Depends(get_current_user),
-):
+async def graph_status(city_key: str):
     """
     Poll the build status for a city graph.
     Angular's map-building-banner calls this every 3 seconds until status == "ready".

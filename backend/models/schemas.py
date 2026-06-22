@@ -91,6 +91,7 @@ class RouteResult(BaseModel):
     novelty_pct: Optional[float] = None  # only for novel routes
     city_key: str
     route_type: str
+    gpx_path: Optional[str] = Field(default=None, exclude=True)
 
 
 # ── Ratings ───────────────────────────────────────────────────────────────────
