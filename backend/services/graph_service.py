@@ -6,9 +6,12 @@
 #          Background build is async-safe: build_status tracks progress for polling.
 
 import asyncio
+import gzip
+import logging
 import math
 import os
 import time
+import urllib.request
 from typing import Optional
 
 import networkx as nx
@@ -20,6 +23,8 @@ from scipy.spatial import KDTree
 import srtm
 
 from backend.core.config import settings
+
+logger = logging.getLogger("routemaker.graph")
 
 # ── In-memory caches ──────────────────────────────────────────────────────────
 
@@ -124,6 +129,32 @@ async def request_graph_build(lat: float, lng: float):
     return key
 
 
+SRTM_BASE_URL = "https://elevation-tiles-prod.s3.amazonaws.com/skadi"
+
+
+def _ensure_srtm_tiles(coords: list[tuple[float, float]], cache_dir: str):
+    needed = set()
+    for lat, lng in coords:
+        filename = srtm.lat_lon_to_filename(lat, lng)
+        needed.add(filename)
+
+    for filename in needed:
+        path = os.path.join(cache_dir, filename)
+        if os.path.exists(path):
+            continue
+        lat_band = filename[:3]
+        url = f"{SRTM_BASE_URL}/{lat_band}/{filename}.gz"
+        logger.info("Downloading SRTM tile %s ...", filename)
+        try:
+            resp = urllib.request.urlopen(url)
+            with gzip.open(resp, "rb") as gz:
+                with open(path, "wb") as f:
+                    f.write(gz.read())
+            logger.info("Downloaded %s", filename)
+        except Exception as e:
+            logger.warning("Failed to download %s: %s", filename, e)
+
+
 def _build_graph_blocking(lat: float, lng: float, key: str):
     """
     Download, process, and save a road network graph. Blocking — runs in a thread.
@@ -152,10 +183,11 @@ def _build_graph_blocking(lat: float, lng: float, key: str):
         # Step 4: Elevation via local SRTM tiles
         srtm_cache = os.path.join(settings.data_dir, "srtm_cache")
         os.makedirs(srtm_cache, exist_ok=True)
-        elevation_svc = srtm.SrtmService(srtm_cache)
         node_ids = list(G.nodes)
         total = len(node_ids)
         coords = [(float(G.nodes[n]["y"]), float(G.nodes[n]["x"])) for n in node_ids]
+        _ensure_srtm_tiles(coords, srtm_cache)
+        elevation_svc = srtm.SrtmService(srtm_cache)
         elevations = elevation_svc.get_elevations_batch(coords)
         for i, (node_id, elev) in enumerate(zip(node_ids, elevations)):
             G.nodes[node_id]["elevation"] = elev if elev != srtm.VOID_VALUE else 0.0
@@ -182,13 +214,13 @@ def _build_graph_blocking(lat: float, lng: float, key: str):
             "status": "ready", "progress_pct": 100,
             "node_count": len(G.nodes), "edge_count": len(G.edges),
         }
-        print(f"[graph_service] Build complete for {key}: {len(G.nodes)} nodes, {len(G.edges)} edges")
+        logger.info("Build complete for %s: %d nodes, %d edges", key, len(G.nodes), len(G.edges))
 
     except Exception as e:
         _build_status[key] = {"status": "error", "progress_pct": 0,
                                "node_count": None, "edge_count": None,
                                "error": str(e)}
-        print(f"[graph_service] Build FAILED for {key}: {e}")
+        logger.exception("Build FAILED for %s: %s", key, e)
 
 
 # ── Startup seeding ───────────────────────────────────────────────────────────
@@ -205,12 +237,12 @@ async def seed_preset_cities():
         path = graph_path(key)
 
         if os.path.exists(path):
-            print(f"[graph_service] Loading cached graph for {name} ({key})...")
+            logger.info("Loading cached graph for %s (%s)...", name, key)
             loop = asyncio.get_event_loop()
             await loop.run_in_executor(None, _load_graph, key)
-            print(f"[graph_service] {name} ready: {len(_graph_cache[key].nodes)} nodes")
+            logger.info("%s ready: %d nodes", name, len(_graph_cache[key].nodes))
         else:
-            print(f"[graph_service] Graph for {name} not found — queuing background build")
+            logger.info("Graph for %s not found — queuing background build", name)
             await request_graph_build(lat, lng)
 
 

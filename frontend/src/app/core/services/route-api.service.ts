@@ -21,6 +21,12 @@ export interface GenerateRequest {
   novelty_factor?: number;
 }
 
+export interface HistoricSite {
+  name: string;
+  lat: number;
+  lng: number;
+}
+
 export interface RouteResult {
   id: string;
   polyline: string;
@@ -29,6 +35,8 @@ export interface RouteResult {
   elevation_ft: number;
   predicted_score: number;
   novelty_pct?: number;
+  historic_sites?: HistoricSite[];
+  elevation_profile?: number[][];   // [distance_mi, elevation_ft] points
   city_key: string;
   route_type: string;
 }

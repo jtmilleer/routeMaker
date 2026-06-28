@@ -15,12 +15,12 @@ import { RouteApiService, RouteResult, RatingStats } from '../../core/services/r
   template: `
     <div class="page">
       <nav class="page-nav">
-        <a routerLink="/app" class="back-link" id="back-to-app-gen">← Back to Route Builder</a>
+        <a routerLink="/app" class="back-link" id="back-to-app-gen">&larr; Back to Route Builder</a>
         <h1 class="page-title">Rate Generated Routes</h1>
       </nav>
 
       <div class="model-bar" *ngIf="stats">
-        <span>🤖 Model v{{ stats.model_version }}</span>
+        <span>Preference model v{{ stats.model_version }}</span>
         <span>{{ stats.total_ratings }} total ratings</span>
         <span *ngIf="stats.ratings_until_next_retrain > 0">
           {{ stats.ratings_until_next_retrain }} until next retrain
@@ -64,25 +64,24 @@ import { RouteApiService, RouteResult, RatingStats } from '../../core/services/r
 
       <!-- After rating: show predicted vs actual comparison -->
       <div class="comparison-card" *ngIf="submitted && lastRating != null">
-        <h3>Rating Saved!</h3>
+        <h3>Rating Saved</h3>
         <div class="compare-row">
           <div class="compare-item">
             <span class="compare-val">{{ lastPredicted }}</span>
             <span class="compare-label">Predicted</span>
           </div>
-          <div class="compare-arrow">→</div>
+          <div class="compare-arrow">&rarr;</div>
           <div class="compare-item">
             <span class="compare-val actual">{{ lastRating }}</span>
             <span class="compare-label">Your Rating</span>
           </div>
         </div>
-        <p class="compare-note" *ngIf="diff > 1.5">The model will learn from this difference!</p>
-        <button class="next-btn" (click)="nextAfterSubmit()" id="next-route-btn">Next Route →</button>
+        <p class="compare-note" *ngIf="diff > 1.5">This difference will improve future routes.</p>
+        <button class="next-btn" (click)="nextAfterSubmit()" id="next-route-btn">Next Route &rarr;</button>
       </div>
 
       <div class="done-state" *ngIf="done && !submitted">
-        <div class="done-icon">✅</div>
-        <h2>All routes reviewed!</h2>
+        <h2>All routes reviewed</h2>
         <a routerLink="/app" class="back-btn">Back to Route Builder</a>
       </div>
 
@@ -93,70 +92,69 @@ import { RouteApiService, RouteResult, RatingStats } from '../../core/services/r
     </div>
   `,
   styles: [`
-    .page { min-height: 100vh; background: #0f0f1a; color: #e5e7eb; padding: 2rem; font-family: 'Inter', sans-serif; }
+    .page { min-height: 100vh; background: var(--bg-primary); color: var(--text-primary); padding: 2rem; font-family: var(--font-primary); }
     .page-nav { display: flex; align-items: center; gap: 1.5rem; margin-bottom: 1.5rem; }
-    .back-link { color: #6b7280; text-decoration: none; font-size: 0.875rem; }
-    .back-link:hover { color: #fff; }
-    .page-title { margin: 0; font-size: 1.5rem; font-weight: 800; color: #fff; }
+    .back-link { color: var(--text-dim); text-decoration: none; font-size: 0.875rem; }
+    .back-link:hover { color: var(--text-primary); }
+    .page-title { margin: 0; font-size: 1.5rem; font-weight: 800; color: var(--text-primary); }
 
     .model-bar {
       display: flex; gap: 1.5rem;
-      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+      background: var(--bg-surface); border: 1px solid var(--border);
       border-radius: 10px; padding: 0.75rem 1rem; margin-bottom: 1.5rem;
-      font-size: 0.82rem; color: #9ca3af;
+      font-size: 0.82rem; color: var(--text-muted);
     }
 
     .route-card {
       max-width: 580px; margin: 0 auto;
-      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
+      background: var(--bg-surface); border: 1px solid var(--border);
       border-radius: 16px; padding: 1.75rem; display: flex; flex-direction: column; gap: 1.25rem;
     }
     .card-header { display: flex; justify-content: space-between; align-items: flex-start; }
-    .route-label { margin: 0 0 0.25rem; font-size: 1.15rem; font-weight: 700; color: #fff; }
-    .predicted { font-size: 0.82rem; color: #9ca3af; }
-    .predicted strong { color: #fc4c02; }
-    .route-count { font-size: 0.8rem; color: #6b7280; }
+    .route-label { margin: 0 0 0.25rem; font-size: 1.15rem; font-weight: 700; color: var(--text-primary); }
+    .predicted { font-size: 0.82rem; color: var(--text-muted); }
+    .predicted strong { color: var(--accent); }
+    .route-count { font-size: 0.8rem; color: var(--text-dim); }
 
     .route-stats { display: flex; gap: 1.25rem; }
     .stat-box { display: flex; flex-direction: column; }
-    .stat-val { font-size: 1.25rem; font-weight: 800; color: #fff; }
-    .stat-label { font-size: 0.65rem; color: #6b7280; text-transform: uppercase; }
+    .stat-val { font-size: 1.25rem; font-weight: 800; color: var(--text-primary); }
+    .stat-label { font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; }
 
-    .rating-label { font-size: 0.875rem; color: #9ca3af; display: block; margin-bottom: 0.5rem; }
+    .rating-label { font-size: 0.875rem; color: var(--text-muted); display: block; margin-bottom: 0.5rem; }
     .rating-btns { display: flex; gap: 0.4rem; flex-wrap: wrap; }
     .rating-btn {
-      width: 42px; height: 42px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12);
-      background: rgba(255,255,255,0.06); color: #d1d5db; font-size: 0.9rem; font-weight: 600;
-      cursor: pointer; transition: all 0.12s;
+      width: 42px; height: 42px; border-radius: 10px; border: 1px solid var(--border);
+      background: var(--bg-surface); color: var(--text-secondary); font-size: 0.9rem; font-weight: 600;
+      font-family: var(--font-primary); cursor: pointer; transition: all 0.12s;
     }
-    .rating-btn:hover { background: rgba(252,76,2,0.15); border-color: rgba(252,76,2,0.4); color: #fc4c02; }
-    .rating-btn.selected { background: rgba(252,76,2,0.2); border-color: #fc4c02; color: #fc4c02; }
+    .rating-btn:hover { background: var(--surface-active); border-color: var(--surface-active-border); color: var(--accent); }
+    .rating-btn.selected { background: rgba(200, 145, 90, 0.2); border-color: var(--accent); color: var(--accent); }
 
-    .skip-btn { background: none; border: none; color: #6b7280; font-size: 0.8rem; cursor: pointer; align-self: center; }
+    .skip-btn { background: none; border: none; color: var(--text-dim); font-size: 0.8rem; font-family: var(--font-primary); cursor: pointer; align-self: center; }
 
     .comparison-card {
       max-width: 400px; margin: 2rem auto; text-align: center;
-      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
+      background: var(--bg-surface); border: 1px solid var(--border);
       border-radius: 16px; padding: 2rem; display: flex; flex-direction: column; gap: 1.25rem; align-items: center;
     }
-    .comparison-card h3 { margin: 0; color: #fff; }
+    .comparison-card h3 { margin: 0; color: var(--text-primary); }
     .compare-row { display: flex; align-items: center; gap: 1.5rem; }
     .compare-item { display: flex; flex-direction: column; align-items: center; }
-    .compare-val { font-size: 2.5rem; font-weight: 800; color: #9ca3af; }
-    .compare-val.actual { color: #fc4c02; }
-    .compare-arrow { font-size: 1.5rem; color: #6b7280; }
-    .compare-label { font-size: 0.7rem; color: #6b7280; text-transform: uppercase; }
-    .compare-note { color: #9ca3af; font-size: 0.85rem; margin: 0; }
-    .next-btn { padding: 0.625rem 1.5rem; background: #fc4c02; color: #fff; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }
+    .compare-val { font-size: 2.5rem; font-weight: 800; color: var(--text-muted); }
+    .compare-val.actual { color: var(--accent); }
+    .compare-arrow { font-size: 1.5rem; color: var(--text-dim); }
+    .compare-label { font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase; }
+    .compare-note { color: var(--text-muted); font-size: 0.85rem; margin: 0; }
+    .next-btn { padding: 0.625rem 1.5rem; background: var(--accent); color: #fff; border: none; border-radius: 8px; font-weight: 600; font-family: var(--font-primary); cursor: pointer; }
 
     .done-state, .loading-state {
       max-width: 400px; margin: 4rem auto; text-align: center;
       display: flex; flex-direction: column; align-items: center; gap: 1rem;
     }
-    .done-icon { font-size: 3rem; }
-    .done-state h2 { margin: 0; color: #fff; }
-    .back-btn { padding: 0.625rem 1.5rem; background: #fc4c02; color: #fff; border-radius: 8px; text-decoration: none; font-weight: 600; }
-    .spinner { width: 32px; height: 32px; border: 3px solid rgba(252,76,2,0.2); border-top-color: #fc4c02; border-radius: 50%; animation: spin 0.8s linear infinite; }
+    .done-state h2 { margin: 0; color: var(--text-primary); }
+    .back-btn { padding: 0.625rem 1.5rem; background: var(--accent); color: #fff; border-radius: 8px; text-decoration: none; font-weight: 600; }
+    .spinner { width: 32px; height: 32px; border: 3px solid rgba(200, 145, 90, 0.2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
   `]
 })

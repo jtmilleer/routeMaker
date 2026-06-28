@@ -3,8 +3,10 @@
 #          file makes direct Strava requests. Handles token refresh transparently
 #          before any API call that needs a valid access token.
 
+import secrets
 import time
 from typing import Optional
+from urllib.parse import urlencode
 
 import httpx
 import pandas as pd
@@ -21,6 +23,11 @@ STRAVA_API_BASE = "https://www.strava.com/api/v3"
 # Minimum bike ride distance to import (mirrors the old MIN_MILES constant)
 MIN_MILES = 10.0
 
+# In-memory CSRF state store for the OAuth flow: state -> created_at (epoch).
+# Single-process deployment assumed (same constraint as the graph cache).
+_oauth_states: dict[str, float] = {}
+_STATE_TTL = 600  # seconds a pending `state` stays valid (10 minutes)
+
 
 # ── OAuth ─────────────────────────────────────────────────────────────────────
 
@@ -28,15 +35,40 @@ def get_authorization_url() -> str:
     """
     Build the Strava OAuth authorization URL.
     Angular redirects the user here to start the login flow.
+    A random ``state`` is generated and stored so the callback can verify it
+    (CSRF protection); all query params are URL-encoded.
     """
-    params = (
-        f"?client_id={settings.strava_client_id}"
-        f"&response_type=code"
-        f"&redirect_uri={settings.strava_redirect_uri}"
-        f"&approval_prompt=auto"
-        f"&scope=read,activity:read_all"
-    )
-    return STRAVA_AUTH_URL + params
+    now = time.time()
+    # Prune expired pending states so the dict can't grow unbounded.
+    for s, ts in list(_oauth_states.items()):
+        if now - ts > _STATE_TTL:
+            _oauth_states.pop(s, None)
+
+    state = secrets.token_urlsafe(24)
+    _oauth_states[state] = now
+
+    params = urlencode({
+        "client_id": settings.strava_client_id,
+        "response_type": "code",
+        "redirect_uri": settings.strava_redirect_uri,
+        "approval_prompt": "auto",
+        "scope": "read,activity:read_all",
+        "state": state,
+    })
+    return f"{STRAVA_AUTH_URL}?{params}"
+
+
+def verify_oauth_state(state: Optional[str]) -> bool:
+    """
+    Validate and consume a ``state`` returned by Strava on the callback.
+    Returns True only if it was issued by us and has not expired or been used.
+    """
+    if not state:
+        return False
+    created_at = _oauth_states.pop(state, None)
+    if created_at is None:
+        return False
+    return (time.time() - created_at) <= _STATE_TTL
 
 
 async def exchange_code(code: str) -> dict:

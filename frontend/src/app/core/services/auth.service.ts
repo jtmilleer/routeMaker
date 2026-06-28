@@ -43,12 +43,30 @@ export class AuthService {
         )
       );
       this.currentUser.set(user ?? null);
+      // Slide the session window forward so an open app doesn't expire mid-use.
+      this.refreshSession();
     } catch {
       // Token expired, invalid, or backend unreachable — clear and continue
-      localStorage.removeItem('rm_jwt');
+      localStorage.removeItem(TOKEN_KEY);
       this.currentUser.set(null);
     } finally {
       this.isLoading.set(false);
+    }
+  }
+
+  /** Quietly re-issue a fresh JWT so the session keeps rolling while in use. */
+  private async refreshSession(): Promise<void> {
+    try {
+      const resp = await firstValueFrom(
+        this.http.post<{ access_token: string }>(`${environment.apiUrl}/auth/refresh`, {}).pipe(
+          timeout(3000)
+        )
+      );
+      if (resp?.access_token) {
+        localStorage.setItem(TOKEN_KEY, resp.access_token);
+      }
+    } catch {
+      // Non-fatal — the existing token is still valid for now.
     }
   }
 

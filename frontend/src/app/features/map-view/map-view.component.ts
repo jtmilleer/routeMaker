@@ -24,7 +24,7 @@ const iconDefault = L.icon({
 });
 L.Marker.prototype.options.icon = iconDefault;
 
-const ROUTE_COLORS = ['#fc4c02', '#3b82f6', '#8b5cf6', '#10b981', '#f59e0b'];
+const ROUTE_COLORS = ['#c8915a', '#7a9a6d', '#a67c52', '#6b8f71', '#b8976a'];
 
 // Decode a Google encoded polyline string to [lat, lng] pairs
 function decodePolyline(encoded: string): [number, number][] {
@@ -49,10 +49,9 @@ function decodePolyline(encoded: string): [number, number][] {
   template: `
     <div class="map-wrap">
       <div #mapEl id="leaflet-map" class="map"></div>
-      <div class="idle-state" *ngIf="!(hasRoutes)">
-        <div class="idle-icon">🚴</div>
-        <h2>Ready to Explore</h2>
-        <p>Select a city, configure your route, and hit Generate.</p>
+      <div class="idle-state" *ngIf="!hasRoutes && !(state.loading$ | async)">
+        <h2>Pick a starting point</h2>
+        <p>Select a city, configure your route, and generate.</p>
       </div>
     </div>
   `,
@@ -62,12 +61,11 @@ function decodePolyline(encoded: string): [number, number][] {
     .idle-state {
       position: absolute; inset: 0; z-index: 2;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      background: rgba(15,15,26,0.85); backdrop-filter: blur(4px);
+      background: rgba(18, 26, 19, 0.85); backdrop-filter: blur(4px);
       pointer-events: none;
-      color: #9ca3af; text-align: center;
+      color: var(--text-muted); text-align: center;
     }
-    .idle-icon { font-size: 3.5rem; margin-bottom: 1rem; }
-    .idle-state h2 { color: #fff; margin: 0 0 0.5rem; font-size: 1.5rem; }
+    .idle-state h2 { color: var(--text-primary); margin: 0 0 0.5rem; font-size: 1.5rem; }
     .idle-state p { margin: 0; font-size: 0.95rem; }
   `]
 })
@@ -75,12 +73,13 @@ export class MapViewComponent implements AfterViewInit, OnDestroy {
   @ViewChild('mapEl', { static: true }) mapEl!: ElementRef<HTMLDivElement>;
 
   private map!: L.Map;
-  private routeLayers: L.Layer[] = [];
+  private routeLayers: { route: RouteResult; layers: L.Polyline[] }[] = [];
+  private siteMarkers: L.Marker[] = [];
   private startMarker?: L.Marker;
   private subs = new Subscription();
   hasRoutes = false;
 
-  constructor(private state: RouteStateService) {}
+  constructor(public state: RouteStateService) {}
 
   ngAfterViewInit(): void {
     this.map = L.map(this.mapEl.nativeElement, {
@@ -91,7 +90,7 @@ export class MapViewComponent implements AfterViewInit, OnDestroy {
 
     // Dark-style tile layer
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '© OpenStreetMap contributors © CARTO',
+      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
       maxZoom: 19,
     }).addTo(this.map);
 
@@ -133,16 +132,35 @@ export class MapViewComponent implements AfterViewInit, OnDestroy {
   }
 
   private renderRoutes(routes: RouteResult[]): void {
-    // Clear existing layers
-    this.routeLayers.forEach(l => this.map.removeLayer(l));
+    this.routeLayers.forEach(rl => rl.layers.forEach(l => this.map.removeLayer(l)));
     this.routeLayers = [];
+    this.siteMarkers.forEach(m => this.map.removeLayer(m));
+    this.siteMarkers = [];
     this.hasRoutes = routes.length > 0;
+
+    const historicIcon = L.divIcon({
+      className: 'historic-marker',
+      html: '<div style="background:#6b8f71;color:#fff;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:14px;border:2px solid #c4bfb4;box-shadow:0 2px 6px rgba(0,0,0,0.4);">&#9733;</div>',
+      iconSize: [24, 24],
+      iconAnchor: [12, 12],
+    });
+    routes.forEach(route => {
+      if (route.historic_sites) {
+        route.historic_sites.forEach(site => {
+          const marker = L.marker([site.lat, site.lng], { icon: historicIcon })
+            .addTo(this.map)
+            .bindTooltip(site.name, { permanent: false, direction: 'top', offset: [0, -14] });
+          this.siteMarkers.push(marker);
+        });
+      }
+    });
 
     routes.forEach((route, i) => {
       const color = ROUTE_COLORS[i % ROUTE_COLORS.length];
+      const layers: L.Polyline[] = [];
+      const tooltip = `#${i + 1} | ${route.predicted_score}/10 | ${route.distance_mi}mi | ${route.elevation_ft}ft`;
 
       if (route.route_segments) {
-        // Novel routes: color ridden vs new sections differently
         try {
           const segments: { polyline: string; is_new: boolean }[] = JSON.parse(route.route_segments);
           segments.forEach(seg => {
@@ -152,19 +170,20 @@ export class MapViewComponent implements AfterViewInit, OnDestroy {
               weight: seg.is_new ? 5 : 2,
               opacity: seg.is_new ? 0.9 : 0.5,
             }).addTo(this.map);
-            layer.bindTooltip(`#${i + 1} | ${route.predicted_score}/10 | ${route.distance_mi}mi | ${route.elevation_ft}ft`);
+            layer.bindTooltip(tooltip);
             layer.on('click', () => this.state.selectRoute(route));
-            this.routeLayers.push(layer);
+            layers.push(layer);
           });
         } catch {
-          this._addSimplePolyline(route, i, color);
+          layers.push(this._makePolyline(route, i, color, tooltip));
         }
       } else {
-        this._addSimplePolyline(route, i, color);
+        layers.push(this._makePolyline(route, i, color, tooltip));
       }
+
+      this.routeLayers.push({ route, layers });
     });
 
-    // Fit map to first route
     if (routes.length > 0 && routes[0].polyline) {
       const points = decodePolyline(routes[0].polyline);
       if (points.length) {
@@ -173,15 +192,33 @@ export class MapViewComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  private _addSimplePolyline(route: RouteResult, i: number, color: string): void {
+  private _makePolyline(route: RouteResult, i: number, color: string, tooltip: string): L.Polyline {
     const points = decodePolyline(route.polyline);
     const layer = L.polyline(points, { color, weight: 4, opacity: 0.85 }).addTo(this.map);
-    layer.bindTooltip(`#${i + 1} | ${route.predicted_score}/10 | ${route.distance_mi}mi | ${route.elevation_ft}ft`);
+    layer.bindTooltip(tooltip);
     layer.on('click', () => this.state.selectRoute(route));
-    this.routeLayers.push(layer);
+    return layer;
   }
 
   private highlightRoute(selected: RouteResult | null): void {
-    // Visual highlight is handled by route card; map re-renders on route change
+    this.routeLayers.forEach(rl => {
+      const isSelected = selected && rl.route.id === selected.id;
+      rl.layers.forEach(layer => {
+        layer.setStyle({
+          opacity: isSelected || !selected ? 0.85 : 0.15,
+          weight: isSelected ? 6 : (selected ? 2 : 4),
+        });
+        if (isSelected) {
+          layer.bringToFront();
+        }
+      });
+    });
+
+    if (selected) {
+      const points = decodePolyline(selected.polyline);
+      if (points.length) {
+        this.map.fitBounds(L.latLngBounds(points), { padding: [30, 30], animate: true });
+      }
+    }
   }
 }

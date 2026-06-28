@@ -32,9 +32,8 @@ const CITY_DISPLAY_NAMES: Record<string, string> = {
           [id]="'city-' + city.name"
           [disabled]="city.status === 'building'"
         >
-          <span class="city-icon">{{ cityIcon(city.name) }}</span>
           <span class="city-name">{{ displayName(city.name) }}</span>
-          <span class="city-status" *ngIf="city.status !== 'ready'">⏳</span>
+          <span class="city-status" *ngIf="city.status !== 'ready'">building</span>
         </button>
 
         <button
@@ -43,7 +42,6 @@ const CITY_DISPLAY_NAMES: Record<string, string> = {
           (click)="toggleCustomMode()"
           id="city-custom-pin"
         >
-          <span class="city-icon">📍</span>
           <span class="city-name">Custom Pin</span>
         </button>
       </div>
@@ -66,34 +64,37 @@ const CITY_DISPLAY_NAMES: Record<string, string> = {
   `,
   styles: [`
     .city-panel { display: flex; flex-direction: column; gap: 0.5rem; }
-    .label { font-size: 0.875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #6b7280; }
+    .label { font-size: 0.875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); }
     .city-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.375rem; }
     .city-btn {
       display: flex; align-items: center; gap: 0.375rem;
-      background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 8px; color: #9ca3af; padding: 0.5rem 0.625rem; font-size: 0.78rem;
+      background: var(--bg-surface); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text-muted); padding: 0.5rem 0.625rem; font-size: 0.78rem;
+      font-family: var(--font-primary);
       cursor: pointer; transition: all 0.15s; text-align: left;
     }
-    .city-btn:hover:not(:disabled) { background: rgba(255,255,255,0.09); color: #d1d5db; }
-    .city-btn.active { background: rgba(252,76,2,0.12); border-color: rgba(252,76,2,0.4); color: #fc4c02; font-weight: 600; }
+    .city-btn:hover:not(:disabled) { background: var(--surface-hover); color: var(--text-secondary); }
+    .city-btn.active { background: var(--surface-active); border-color: var(--surface-active-border); color: var(--accent); font-weight: 600; }
     .city-btn.building { opacity: 0.6; cursor: wait; }
     .city-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .city-icon { font-size: 1rem; }
     .city-name { flex: 1; }
+    .city-status { font-size: 0.65rem; color: var(--text-dim); font-style: italic; }
     .custom-btn { grid-column: 1 / -1; }
 
     .custom-inputs { display: flex; flex-direction: column; gap: 0.375rem; }
     .coord-input {
       width: 100%; padding: 0.5rem 0.75rem;
-      background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 8px; color: #e5e7eb; font-size: 0.85rem;
+      background: var(--bg-surface); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text-primary); font-size: 0.85rem;
+      font-family: var(--font-primary);
     }
-    .coord-input:focus { outline: none; border-color: #fc4c02; }
+    .coord-input:focus { outline: none; border-color: var(--accent); }
     .set-btn {
-      padding: 0.5rem; background: rgba(252,76,2,0.15); border: 1px solid rgba(252,76,2,0.4);
-      border-radius: 8px; color: #fc4c02; font-size: 0.82rem; font-weight: 600; cursor: pointer;
+      padding: 0.5rem; background: var(--surface-active); border: 1px solid var(--surface-active-border);
+      border-radius: 8px; color: var(--accent); font-size: 0.82rem; font-weight: 600;
+      font-family: var(--font-primary); cursor: pointer;
     }
-    .hint { font-size: 0.7rem; color: #6b7280; margin: 0; }
+    .hint { font-size: 0.7rem; color: var(--text-dim); margin: 0; }
   `]
 })
 export class CitySelectorComponent implements OnInit {
@@ -153,12 +154,5 @@ export class CitySelectorComponent implements OnInit {
 
   displayName(name: string): string {
     return CITY_DISPLAY_NAMES[name] ?? name;
-  }
-
-  cityIcon(name: string): string {
-    const icons: Record<string, string> = {
-      iowa_city: '🌽', madison: '🧀', des_moines: '🌪️',
-    };
-    return icons[name] ?? '🏙️';
   }
 }

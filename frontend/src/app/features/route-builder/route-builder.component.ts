@@ -34,8 +34,7 @@ import { LoadingOverlayComponent } from '../../shared/components/loading-overlay
       <!-- Top Navigation -->
       <nav class="topnav">
         <div class="nav-brand">
-          <span class="brand-icon">🚴</span>
-          <span class="brand-name">Route<span class="accent">Maker</span></span>
+          <span class="brand-name">RouteMaker</span>
         </div>
         <div class="nav-links">
           <a routerLink="/app/rate-rides" class="nav-link" id="nav-rate-rides">Rate Rides</a>
@@ -43,7 +42,7 @@ import { LoadingOverlayComponent } from '../../shared/components/loading-overlay
           <div class="nav-user" *ngIf="auth.currentUser() as user">
             <img *ngIf="user.profile_pic_url" [src]="user.profile_pic_url" class="avatar" alt="Profile">
             <span class="user-name">{{ user.name }}</span>
-            <span class="model-badge" title="Model version">v{{ user.model_version }}</span>
+            <span class="model-badge" title="Preference model version">v{{ user.model_version }}</span>
           </div>
           <button class="logout-btn" (click)="auth.logout()" id="logout-btn">Sign Out</button>
         </div>
@@ -70,37 +69,35 @@ import { LoadingOverlayComponent } from '../../shared/components/loading-overlay
   `,
   styles: [`
     :host { display: block; height: 100vh; overflow: hidden; }
-    .app-shell { display: flex; flex-direction: column; height: 100vh; background: #0f0f1a; color: #e5e7eb; font-family: 'Inter', sans-serif; }
+    .app-shell { display: flex; flex-direction: column; height: 100vh; background: var(--bg-primary); color: var(--text-primary); font-family: var(--font-primary); }
 
     .topnav {
       display: flex; align-items: center; justify-content: space-between;
       padding: 0 1.5rem; height: 56px; min-height: 56px;
-      background: rgba(15,15,26,0.95);
-      border-bottom: 1px solid rgba(255,255,255,0.08);
+      background: rgba(18, 26, 19, 0.95);
+      border-bottom: 1px solid var(--border);
       backdrop-filter: blur(12px);
       z-index: 100;
     }
     .nav-brand { display: flex; align-items: center; gap: 0.5rem; }
-    .brand-icon { font-size: 1.4rem; }
-    .brand-name { font-size: 1.25rem; font-weight: 800; color: #fff; }
-    .accent { color: #fc4c02; }
+    .brand-name { font-size: 1.25rem; font-weight: 800; color: var(--text-primary); }
 
     .nav-links { display: flex; align-items: center; gap: 1rem; }
-    .nav-link { color: #9ca3af; text-decoration: none; font-size: 0.875rem; font-weight: 500; transition: color 0.15s; }
-    .nav-link:hover { color: #fff; }
+    .nav-link { color: var(--text-muted); text-decoration: none; font-size: 0.875rem; font-weight: 500; transition: color 0.15s; }
+    .nav-link:hover { color: var(--text-primary); }
     .nav-user { display: flex; align-items: center; gap: 0.5rem; }
     .avatar { width: 28px; height: 28px; border-radius: 50%; }
-    .user-name { font-size: 0.875rem; color: #d1d5db; }
-    .model-badge { font-size: 0.7rem; background: rgba(252,76,2,0.2); color: #fc4c02; border-radius: 4px; padding: 2px 6px; font-weight: 600; }
-    .logout-btn { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; color: #9ca3af; padding: 0.375rem 0.75rem; font-size: 0.8rem; cursor: pointer; transition: all 0.15s; }
-    .logout-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+    .user-name { font-size: 0.875rem; color: var(--text-secondary); }
+    .model-badge { font-size: 0.7rem; background: var(--surface-active); color: var(--accent); border-radius: 4px; padding: 2px 6px; font-weight: 600; }
+    .logout-btn { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text-muted); padding: 0.375rem 0.75rem; font-size: 0.8rem; font-family: var(--font-primary); cursor: pointer; transition: all 0.15s; }
+    .logout-btn:hover { background: var(--surface-hover); color: var(--text-primary); }
 
     .main-layout { display: flex; flex: 1; overflow: hidden; }
 
     .sidebar {
       width: 320px; min-width: 320px;
-      background: rgba(255,255,255,0.03);
-      border-right: 1px solid rgba(255,255,255,0.08);
+      background: rgba(200, 190, 170, 0.03);
+      border-right: 1px solid var(--border);
       display: flex; flex-direction: column; overflow-y: auto;
       padding: 1rem;
       gap: 1rem;

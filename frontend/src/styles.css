@@ -4,6 +4,40 @@
 /* Leaflet map styles */
 @import 'leaflet/dist/leaflet.css';
 
+/* ── Design System: Topo/Cartographic ──────────────────────────────── */
+:root {
+  /* Typography */
+  --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* Backgrounds — dark earth tones, like a night-mode topo map */
+  --bg-primary: #121a13;
+  --bg-secondary: #1a2418;
+  --bg-surface: rgba(200, 190, 170, 0.05);
+
+  /* Text hierarchy */
+  --text-primary: #e8e4de;
+  --text-secondary: #c4bfb4;
+  --text-muted: #8a8477;
+  --text-dim: #5e5a52;
+
+  /* Accent — warm amber */
+  --accent: #c8915a;
+  --accent-hover: #daa06d;
+  --accent-glow: rgba(200, 145, 90, 0.3);
+
+  /* Borders — earthy contour-line feel */
+  --border: rgba(200, 190, 170, 0.12);
+  --border-subtle: rgba(200, 190, 170, 0.07);
+
+  /* Interactive surfaces */
+  --surface-hover: rgba(200, 190, 170, 0.08);
+  --surface-active: rgba(200, 145, 90, 0.12);
+  --surface-active-border: rgba(200, 145, 90, 0.35);
+
+  /* Strava brand (only used on the login button) */
+  --strava-orange: #fc4c02;
+}
+
 *, *::before, *::after {
   box-sizing: border-box;
 }
@@ -12,24 +46,24 @@ html, body {
   margin: 0;
   padding: 0;
   height: 100%;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  background: #0f0f1a;
-  color: #e5e7eb;
+  font-family: var(--font-primary);
+  background: var(--bg-primary);
+  color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
 }
 
 /* Custom scrollbar */
 ::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: rgba(255,255,255,0.03); }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+::-webkit-scrollbar-track { background: rgba(200, 190, 170, 0.03); }
+::-webkit-scrollbar-thumb { background: rgba(200, 190, 170, 0.15); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(200, 190, 170, 0.25); }
 
 /* Leaflet popup theming */
 .leaflet-popup-content-wrapper {
-  background: #1a1a2e;
-  border: 1px solid rgba(255,255,255,0.12);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
   border-radius: 10px;
-  color: #e5e7eb;
-  font-family: 'Inter', sans-serif;
+  color: var(--text-primary);
+  font-family: var(--font-primary);
 }
-.leaflet-popup-tip { background: #1a1a2e; }
+.leaflet-popup-tip { background: var(--bg-secondary); }

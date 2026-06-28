@@ -6,6 +6,7 @@ import uuid
 
 import gpxpy
 import gpxpy.gpx
+import httpx
 import networkx as nx
 import numpy as np
 import osmnx as ox
@@ -13,11 +14,14 @@ import pandas as pd
 import polyline as pl
 
 from backend.core.config import settings
-from backend.models.schemas import GenerateRequest, RouteResult
+from backend.models.schemas import GenerateRequest, HistoricSite, RouteResult
 from backend.services import graph_service, model_service
 
 NUM_CANDIDATES = 30
 MAX_ATTEMPTS_MULTIPLIER = 10
+
+# Cache: city_key -> list of (node_id, name, lat, lng)
+_historic_sites_cache: dict[str, list] = {}
 
 
 def generate_routes(
@@ -29,6 +33,8 @@ def generate_routes(
     G = G.copy()
 
     weight_attr = "length"
+    historic_nodes = None
+
     if params.route_type == "hilly":
         graph_service.mark_hilly_edges(G, params.hilly_factor)
         weight_attr = "routing_weight"
@@ -39,6 +45,11 @@ def generate_routes(
         for u, v, k, d in G.edges(keys=True, data=True):
             d["routing_weight"] = d["length"]
         weight_attr = "routing_weight"
+        historic_nodes = _load_historic_sites(
+            G, params.start_lat, params.start_lng, params.distance_mi,
+        )
+        if not historic_nodes:
+            raise ValueError("No historic sites found near this location")
 
     start_node = ox.distance.nearest_nodes(G, params.start_lng, params.start_lat)
     target_m = params.distance_mi / 0.000621371
@@ -51,12 +62,24 @@ def generate_routes(
 
     while len(results) < NUM_CANDIDATES and attempts < max_attempts:
         attempts += 1
-        path, dist_miles = _generate_loop(
-            G, start_node, target_m, params.distance_mi, params.tolerance,
-            int_ids, int_coords, int_tree, heuristic, weight_attr,
-        )
-        if path is None:
-            continue
+
+        if params.route_type == "historic":
+            loop_result = _generate_historic_loop(
+                G, start_node, target_m, params.distance_mi, params.tolerance,
+                int_ids, int_coords, int_tree, heuristic, weight_attr,
+                historic_nodes, params.downtown_radius,
+            )
+            if loop_result is None:
+                continue
+            path, dist_miles, sites_visited = loop_result
+        else:
+            path, dist_miles = _generate_loop(
+                G, start_node, target_m, params.distance_mi, params.tolerance,
+                int_ids, int_coords, int_tree, heuristic, weight_attr,
+            )
+            if path is None:
+                continue
+            sites_visited = None
 
         elev_ft = _estimate_elevation_gain(G, path)
         features = {
@@ -77,10 +100,10 @@ def generate_routes(
             route_segments = _encode_segments(G, path)
 
         polyline_str = _encode_polyline(G, path)
+        elevation_profile = _build_elevation_profile(G, path)
         city_k = graph_service.city_key(params.start_lat, params.start_lng)
         route_id = str(uuid.uuid4())
-
-        gpx_path = _save_gpx(G, path, route_id)
+        gpx_path = _save_gpx(G, path, route_id, sites_visited)
 
         results.append({
             "id": route_id,
@@ -91,8 +114,10 @@ def generate_routes(
             "novelty_pct": novelty_pct,
             "polyline": polyline_str,
             "route_segments": route_segments,
+            "elevation_profile": elevation_profile,
             "city_key": city_k,
             "gpx_path": gpx_path,
+            "historic_sites": sites_visited,
         })
 
     if params.route_type == "hilly":
@@ -112,6 +137,11 @@ def generate_routes(
             elevation_ft=r["elev_ft"],
             predicted_score=r["score"],
             novelty_pct=r["novelty_pct"],
+            historic_sites=[
+                HistoricSite(name=s["name"], lat=s["lat"], lng=s["lng"])
+                for s in r["historic_sites"]
+            ] if r.get("historic_sites") else None,
+            elevation_profile=r["elevation_profile"],
             city_key=r["city_key"],
             route_type=params.route_type,
             gpx_path=r["gpx_path"],
@@ -120,7 +150,179 @@ def generate_routes(
     ]
 
 
-# -- Loop generation -----------------------------------------------------------
+# -- Historic sites ------------------------------------------------------------
+
+def _load_historic_sites(
+    G: nx.MultiDiGraph, start_lat: float, start_lng: float, distance_mi: float,
+) -> list[dict]:
+    city_k = graph_service.city_key(start_lat, start_lng)
+    if city_k in _historic_sites_cache:
+        return _historic_sites_cache[city_k]
+
+    sites = _fetch_historic_sites_from_nps(start_lat, start_lng, distance_mi)
+    if not sites:
+        sites = _load_historic_sites_from_csv(start_lat, start_lng, distance_mi)
+
+    max_dist = distance_mi * 1609.34 / 2 * 0.90
+    valid = []
+    for site in sites:
+        d = ox.distance.great_circle(start_lat, start_lng, site["lat"], site["lng"])
+        if d < max_dist:
+            node = ox.distance.nearest_nodes(G, site["lng"], site["lat"])
+            valid.append({
+                "node": node,
+                "name": site["name"],
+                "lat": float(G.nodes[node]["y"]),
+                "lng": float(G.nodes[node]["x"]),
+            })
+
+    _historic_sites_cache[city_k] = valid
+    print(f"[route_service] {len(valid)} historic sites reachable near {city_k}")
+    return valid
+
+
+def _fetch_historic_sites_from_nps(lat: float, lng: float, distance_mi: float) -> list[dict]:
+    url = "https://mapservices.nps.gov/arcgis/rest/services/cultural_resources/nrhp_locations/MapServer/0/query"
+    radius_deg = distance_mi / 69.0
+    envelope = {
+        "xmin": lng - radius_deg,
+        "ymin": lat - radius_deg,
+        "xmax": lng + radius_deg,
+        "ymax": lat + radius_deg,
+        "spatialReference": {"wkid": 4326},
+    }
+    params = {
+        "geometry": json.dumps(envelope),
+        "geometryType": "esriGeometryEnvelope",
+        "spatialRel": "esriSpatialRelIntersects",
+        "outFields": "RESNAME",
+        "outSR": "4326",
+        "f": "json",
+        "returnGeometry": "true",
+        "resultRecordCount": 2000,
+    }
+    try:
+        resp = httpx.get(url, params=params, timeout=30)
+        resp.raise_for_status()
+        data = resp.json()
+        sites = []
+        for f in data.get("features", []):
+            geom = f.get("geometry", {})
+            attrs = f.get("attributes", {})
+            x, y = geom.get("x"), geom.get("y")
+            name = attrs.get("RESNAME")
+            if x and y and name:
+                sites.append({"name": name, "lat": y, "lng": x})
+        print(f"[route_service] Fetched {len(sites)} historic sites from NPS API")
+        return sites
+    except Exception as e:
+        print(f"[route_service] NPS API failed: {e}, falling back to CSV")
+        return []
+
+
+def _load_historic_sites_from_csv(lat: float, lng: float, distance_mi: float) -> list[dict]:
+    csv_dir = os.path.join(os.path.dirname(__file__), "..", "..", "data")
+    sites = []
+    for filename in os.listdir(csv_dir):
+        if filename.endswith("_historic_sites.csv"):
+            try:
+                df = pd.read_csv(os.path.join(csv_dir, filename))
+                if df.empty:
+                    continue
+                for _, row in df.iterrows():
+                    if pd.notna(row.get("lat")) and pd.notna(row.get("lng")) and pd.notna(row.get("name")):
+                        sites.append({"name": row["name"], "lat": row["lat"], "lng": row["lng"]})
+            except Exception:
+                continue
+    print(f"[route_service] Loaded {len(sites)} historic sites from CSV files")
+    return sites
+
+
+# -- Historic loop generation --------------------------------------------------
+
+def _generate_historic_loop(G, start_node, target_meters, target_miles, tolerance,
+                            int_ids, int_coords, int_tree, heuristic, weight_attr,
+                            historic_nodes, downtown_radius):
+    start_lat = float(G.nodes[start_node]["y"])
+    start_lng = float(G.nodes[start_node]["x"])
+
+    for _ in range(100):
+        try:
+            site1 = random.choice(historic_nodes)
+            wp1 = site1["node"]
+            wp1_lat, wp1_lng = site1["lat"], site1["lng"]
+            d1 = ox.distance.great_circle(start_lat, start_lng, wp1_lat, wp1_lng)
+
+            sites_visited = [{"name": site1["name"], "lat": wp1_lat, "lng": wp1_lng}]
+            site2 = None
+
+            if d1 < downtown_radius:
+                far = [s for s in historic_nodes
+                       if ox.distance.great_circle(start_lat, start_lng, s["lat"], s["lng"]) > downtown_radius]
+                if far:
+                    site2 = random.choice(far)
+                    wp2 = site2["node"]
+                else:
+                    rem = max(5000, target_meters - d1)
+                    angle = random.uniform(0, 360)
+                    rad = math.radians(angle)
+                    dlat = (rem / 2 / 111320) * math.cos(rad)
+                    dlng = (rem / 2 / (111320 * math.cos(math.radians(wp1_lat)))) * math.sin(rad)
+                    wp2 = graph_service.nearest_intersection(
+                        int_ids, int_coords, int_tree, wp1_lat + dlat, wp1_lng + dlng
+                    )
+            else:
+                rem = max(5000, target_meters - d1)
+                angle = random.uniform(0, 360)
+                rad = math.radians(angle)
+                dlat = (rem / 2 / 111320) * math.cos(rad)
+                dlng = (rem / 2 / (111320 * math.cos(math.radians(wp1_lat)))) * math.sin(rad)
+                wp2 = graph_service.nearest_intersection(
+                    int_ids, int_coords, int_tree, wp1_lat + dlat, wp1_lng + dlng
+                )
+
+            if site2:
+                sites_visited.append({"name": site2["name"], "lat": site2["lat"], "lng": site2["lng"]})
+
+            seg1 = nx.astar_path(G, start_node, wp1, heuristic=heuristic, weight=weight_attr)
+            seg1 = _remove_spurs(seg1)
+            seg2 = nx.astar_path(G, wp1, wp2, heuristic=heuristic, weight=weight_attr)
+            seg2 = _remove_spurs(seg2)
+            seg3 = nx.astar_path(G, wp2, start_node, heuristic=heuristic, weight=weight_attr)
+            seg3 = _remove_spurs(seg3)
+
+            full_path = seg1 + seg2[1:] + seg3[1:]
+            full_path = _remove_spurs(full_path)
+
+            total_dist = sum(
+                G.get_edge_data(u, v, 0).get("length", 0)
+                for u, v in zip(full_path[:-1], full_path[1:])
+            )
+            dist_miles = total_dist * 0.000621371
+            low = target_miles * (1 - tolerance)
+            high = target_miles * (1 + tolerance)
+
+            if not (low <= dist_miles <= high):
+                continue
+
+            all_edges = list(zip(full_path[:-1], full_path[1:]))
+            unique_edges = len(set(all_edges))
+            reuse_ratio = 1 - (unique_edges / len(all_edges)) if all_edges else 1
+            if reuse_ratio > 0.15:
+                continue
+
+            if _has_detours(G, full_path):
+                continue
+
+            return full_path, dist_miles, sites_visited
+
+        except (nx.NetworkXNoPath, nx.NodeNotFound):
+            continue
+
+    return None
+
+
+# -- Standard loop generation --------------------------------------------------
 
 def _generate_loop(G, start_node, target_meters, target_miles, tolerance,
                    int_ids, int_coords, int_tree, heuristic, weight_attr):
@@ -283,6 +485,52 @@ def _estimate_elevation_gain(G, path):
     return gain * 3.28084
 
 
+def _build_elevation_profile(G, path, max_points=60):
+    """
+    Build a downsampled elevation profile for charting: a list of
+    [cumulative_distance_mi, elevation_ft] points along the route.
+    Reuses _path_to_coords (which already resolves per-point elevation in
+    meters) and ox.distance.great_circle for cumulative distance. Returns
+    None if no usable elevation data exists.
+    """
+    coords = _path_to_coords(G, path)
+    if not coords:
+        return None
+
+    points = []
+    cum_m = 0.0
+    prev = None
+    last_elev_ft = 0.0
+    have_elev = False
+
+    for lat, lng, elev in coords:
+        if prev is not None:
+            cum_m += ox.distance.great_circle(prev[0], prev[1], lat, lng)
+        elev_ft = None
+        try:
+            if elev is not None and float(elev) > 0:
+                elev_ft = float(elev) * 3.28084
+                have_elev = True
+        except (TypeError, ValueError):
+            elev_ft = None
+        # Carry the last known elevation across gaps so the line stays continuous.
+        last_elev_ft = elev_ft if elev_ft is not None else last_elev_ft
+        points.append([cum_m * 0.000621371, last_elev_ft])
+        prev = (lat, lng)
+
+    if not have_elev or len(points) < 2:
+        return None
+
+    # Downsample evenly to keep the payload small, always keeping the last point.
+    if len(points) > max_points:
+        step = len(points) / max_points
+        sampled = [points[int(i * step)] for i in range(max_points)]
+        sampled.append(points[-1])
+        points = sampled
+
+    return [[round(d, 3), round(e, 1)] for d, e in points]
+
+
 def _calculate_novelty_pct(G, path):
     novel_dist = 0
     total_dist = 0
@@ -381,7 +629,7 @@ def _encode_segments(G, path):
     return json.dumps(segments)
 
 
-def _save_gpx(G, path, route_id):
+def _save_gpx(G, path, route_id, historic_sites=None):
     gpx_dir = os.path.join(settings.data_dir, "gpx")
     os.makedirs(gpx_dir, exist_ok=True)
     coords = _path_to_coords(G, path)
@@ -394,6 +642,11 @@ def _save_gpx(G, path, route_id):
     for lat, lng, elev in coords:
         elev_clean = elev if (elev is not None and elev > 0) else None
         segment.points.append(gpxpy.gpx.GPXTrackPoint(lat, lng, elevation=elev_clean))
+
+    if historic_sites:
+        for site in historic_sites:
+            wp = gpxpy.gpx.GPXWaypoint(site["lat"], site["lng"], name=site["name"])
+            gpx.waypoints.append(wp)
 
     filepath = os.path.join(gpx_dir, f"{route_id}.gpx")
     with open(filepath, "w") as f:

@@ -6,7 +6,7 @@ import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouteResult, RouteApiService } from '../../../core/services/route-api.service';
 
-const RANK_COLORS = ['#fc4c02', '#3b82f6', '#8b5cf6', '#10b981', '#f59e0b'];
+const RANK_COLORS = ['#c8915a', '#7a9a6d', '#a67c52', '#6b8f71', '#b8976a'];
 
 @Component({
   selector: 'app-route-card',
@@ -32,45 +32,70 @@ const RANK_COLORS = ['#fc4c02', '#3b82f6', '#8b5cf6', '#10b981', '#f59e0b'];
           <span class="stat-label">new roads</span>
         </div>
       </div>
+      <svg
+        *ngIf="elevationLine"
+        class="elev-chart"
+        viewBox="0 0 100 28"
+        preserveAspectRatio="none"
+        [attr.aria-label]="'Elevation profile'"
+      >
+        <path [attr.d]="elevationArea" class="elev-area" />
+        <path [attr.d]="elevationLine" class="elev-line" [attr.stroke]="rankColor" />
+      </svg>
+      <div class="historic-sites" *ngIf="route.historic_sites?.length">
+        <span class="site-tag" *ngFor="let site of route.historic_sites">{{ site.name }}</span>
+      </div>
       <button
         class="gpx-btn"
         [id]="'gpx-btn-' + route.id"
         (click)="downloadGpx($event)"
         [disabled]="downloading"
       >
-        {{ downloading ? 'Downloading...' : '↓ GPX' }}
+        {{ downloading ? 'Downloading...' : 'Download GPX' }}
       </button>
     </div>
   `,
   styles: [`
     .card {
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.08);
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
       border-left: 3px solid transparent;
       border-radius: 10px;
       padding: 0.75rem;
       cursor: pointer;
       transition: all 0.15s;
     }
-    .card:hover { background: rgba(255,255,255,0.07); }
-    .card.selected { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); }
+    .card:hover { background: var(--surface-hover); }
+    .card.selected { background: rgba(200, 190, 170, 0.1); border-color: rgba(200, 190, 170, 0.2); }
 
     .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
     .rank { font-weight: 800; font-size: 0.85rem; }
-    .score { font-size: 1.25rem; font-weight: 800; color: #fff; }
-    .score-max { font-size: 0.7rem; color: #6b7280; font-weight: 400; }
+    .score { font-size: 1.25rem; font-weight: 800; color: var(--text-primary); }
+    .score-max { font-size: 0.7rem; color: var(--text-dim); font-weight: 400; }
 
     .stats { display: flex; gap: 1rem; margin-bottom: 0.625rem; }
     .stat { display: flex; flex-direction: column; }
-    .stat-val { font-size: 0.9rem; font-weight: 700; color: #e5e7eb; }
-    .stat-label { font-size: 0.65rem; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; }
+    .stat-val { font-size: 0.9rem; font-weight: 700; color: var(--text-primary); }
+    .stat-label { font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; }
+
+    .elev-chart { width: 100%; height: 30px; display: block; margin-bottom: 0.625rem; overflow: visible; }
+    .elev-line { fill: none; stroke-width: 1.25; vector-effect: non-scaling-stroke; opacity: 0.9; }
+    .elev-area { fill: rgba(200, 145, 90, 0.12); stroke: none; }
+
+    .historic-sites { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-bottom: 0.5rem; }
+    .site-tag {
+      font-size: 0.7rem; background: rgba(107, 143, 113, 0.15); color: #8fb896;
+      border: 1px solid rgba(107, 143, 113, 0.3); border-radius: 6px; padding: 0.2rem 0.5rem;
+      max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
 
     .gpx-btn {
-      width: 100%; padding: 0.375rem; background: rgba(255,255,255,0.07);
-      border: 1px solid rgba(255,255,255,0.12); border-radius: 6px;
-      color: #9ca3af; font-size: 0.75rem; cursor: pointer; transition: all 0.15s;
+      width: 100%; padding: 0.375rem; background: var(--bg-surface);
+      border: 1px solid var(--border); border-radius: 6px;
+      color: var(--text-muted); font-size: 0.75rem; font-family: var(--font-primary);
+      cursor: pointer; transition: all 0.15s;
     }
-    .gpx-btn:hover:not(:disabled) { background: rgba(255,255,255,0.12); color: #fff; }
+    .gpx-btn:hover:not(:disabled) { background: var(--surface-hover); color: var(--text-primary); }
     .gpx-btn:disabled { opacity: 0.5; cursor: not-allowed; }
   `]
 })
@@ -82,6 +107,32 @@ export class RouteCardComponent {
 
   get rankColor(): string {
     return RANK_COLORS[(this.rank - 1) % RANK_COLORS.length];
+  }
+
+  /** SVG path for the elevation line, mapped into the 100x28 viewBox. */
+  get elevationLine(): string | null {
+    const prof = this.route.elevation_profile;
+    if (!prof || prof.length < 2) return null;
+
+    const maxD = prof[prof.length - 1][0] || 1;
+    const elevs = prof.map(p => p[1]);
+    const minE = Math.min(...elevs);
+    const range = Math.max(...elevs) - minE || 1;
+    const W = 100, H = 28;
+
+    return prof
+      .map((p, i) => {
+        const x = (p[0] / maxD) * W;
+        const y = H - ((p[1] - minE) / range) * H;
+        return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
+      })
+      .join(' ');
+  }
+
+  /** Closed path filling the area under the elevation line. */
+  get elevationArea(): string | null {
+    const line = this.elevationLine;
+    return line ? `${line} L100,28 L0,28 Z` : null;
   }
 
   constructor(private api: RouteApiService) {}

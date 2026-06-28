@@ -27,7 +27,7 @@ type RouteType = 'regular' | 'hilly' | 'historic' | 'novel';
             [class.active]="routeType === t.value"
             (click)="routeType = t.value"
             [id]="'mode-' + t.value">
-            {{ t.icon }} {{ t.label }}
+            {{ t.label }}
           </button>
         </div>
       </div>
@@ -41,7 +41,7 @@ type RouteType = 'regular' | 'hilly' | 'historic' | 'novel';
 
       <!-- Tolerance -->
       <div class="form-group">
-        <label class="label">Tolerance: <span class="val accent">±{{ (tolerance * 100).toFixed(0) }}%</span></label>
+        <label class="label">Tolerance: <span class="val accent">&plusmn;{{ (tolerance * 100).toFixed(0) }}%</span></label>
         <input id="tolerance-slider" type="range" class="slider" min="0.05" max="0.5" step="0.05" [(ngModel)]="tolerance">
         <div class="slider-range"><span>5%</span><span>50%</span></div>
       </div>
@@ -74,7 +74,7 @@ type RouteType = 'regular' | 'hilly' | 'historic' | 'novel';
         (click)="generate()"
         [disabled]="(state.loading$ | async) || !(state.activeCity$ | async)"
       >
-        <span *ngIf="!(state.loading$ | async)">⚡ Generate Routes</span>
+        <span *ngIf="!(state.loading$ | async)">Generate Routes</span>
         <span *ngIf="state.loading$ | async">Generating...</span>
       </button>
 
@@ -86,34 +86,36 @@ type RouteType = 'regular' | 'hilly' | 'historic' | 'novel';
   `,
   styles: [`
     .form-panel { display: flex; flex-direction: column; gap: 1rem; }
-    .section-title { font-size: 0.875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #6b7280; margin: 0 0 0.5rem; }
+    .section-title { font-size: 0.875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); margin: 0 0 0.5rem; }
     .form-group { display: flex; flex-direction: column; gap: 0.375rem; }
-    .label { font-size: 0.8rem; color: #9ca3af; font-weight: 500; }
+    .label { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
     .val { font-weight: 700; }
-    .accent { color: #fc4c02; }
+    .accent { color: var(--accent); }
 
     .mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.375rem; }
     .mode-btn {
-      background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 8px; color: #9ca3af; padding: 0.5rem; font-size: 0.8rem;
+      background: var(--bg-surface); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text-muted); padding: 0.5rem; font-size: 0.8rem;
+      font-family: var(--font-primary);
       cursor: pointer; transition: all 0.15s; text-align: center;
     }
-    .mode-btn:hover { background: rgba(255,255,255,0.09); color: #d1d5db; }
-    .mode-btn.active { background: rgba(252,76,2,0.15); border-color: #fc4c02; color: #fc4c02; font-weight: 600; }
+    .mode-btn:hover { background: var(--surface-hover); color: var(--text-secondary); }
+    .mode-btn.active { background: var(--surface-active); border-color: var(--surface-active-border); color: var(--accent); font-weight: 600; }
 
-    .slider { width: 100%; accent-color: #fc4c02; cursor: pointer; }
-    .slider-range { display: flex; justify-content: space-between; font-size: 0.7rem; color: #6b7280; margin-top: -0.25rem; }
+    .slider { width: 100%; accent-color: var(--accent); cursor: pointer; }
+    .slider-range { display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-dim); margin-top: -0.25rem; }
 
     .generate-btn {
-      width: 100%; padding: 0.875rem; background: linear-gradient(135deg, #fc4c02, #e63a00);
+      width: 100%; padding: 0.875rem; background: var(--accent);
       border: none; border-radius: 10px; color: #fff; font-size: 0.95rem;
-      font-weight: 700; cursor: pointer; transition: all 0.15s;
-      box-shadow: 0 4px 16px rgba(252,76,2,0.3);
+      font-weight: 700; font-family: var(--font-primary);
+      cursor: pointer; transition: all 0.15s;
+      box-shadow: 0 4px 16px var(--accent-glow);
       margin-top: 0.5rem;
     }
-    .generate-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(252,76,2,0.45); }
+    .generate-btn:hover:not(:disabled) { background: var(--accent-hover); transform: translateY(-1px); box-shadow: 0 6px 24px var(--accent-glow); }
     .generate-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-    .hint { font-size: 0.75rem; color: #6b7280; text-align: center; margin: 0; }
+    .hint { font-size: 0.75rem; color: var(--text-dim); text-align: center; margin: 0; }
     .error { font-size: 0.75rem; color: #ef4444; margin: 0; }
   `]
 })
@@ -127,10 +129,10 @@ export class RouteFormComponent {
   error = '';
 
   routeTypes = [
-    { value: 'regular' as RouteType, icon: '🔄', label: 'Regular' },
-    { value: 'hilly' as RouteType, icon: '⛰️', label: 'Hilly' },
-    { value: 'historic' as RouteType, icon: '🏛️', label: 'Historic' },
-    { value: 'novel' as RouteType, icon: '🗺️', label: 'Novel' },
+    { value: 'regular' as RouteType, label: 'Regular' },
+    { value: 'hilly' as RouteType, label: 'Hilly' },
+    { value: 'historic' as RouteType, label: 'Historic' },
+    { value: 'novel' as RouteType, label: 'Novel' },
   ];
 
   constructor(private api: RouteApiService, public state: RouteStateService) {}

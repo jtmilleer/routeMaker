@@ -45,6 +45,12 @@ frontend/node_modules/
 frontend/dist/
 frontend/.angular/
 
+# Generated GPX route output (bulky, regenerated on demand)
+data/gpx/
+
+# Claude Code local settings, agents, and worktrees
+.claude/
+
 # OS / editor
 .DS_Store
 Thumbs.db

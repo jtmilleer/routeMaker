@@ -1,6 +1,8 @@
 # LAYER: Router — Ride Management
 # PURPOSE: Syncing rides from Strava and listing them with user ratings merged in.
 
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -36,7 +38,7 @@ async def sync_rides(
                 id=int(row["id"]),
                 athlete_id=athlete_id,
                 name=row["name"],
-                date=row.get("date"),
+                date=datetime.fromisoformat(row["date"].replace("Z", "+00:00")) if row.get("date") else None,
                 distance_mi=row.get("distance_mi"),
                 elevation_ft=row.get("elevation_ft"),
                 moving_time_min=row.get("moving_time_min"),

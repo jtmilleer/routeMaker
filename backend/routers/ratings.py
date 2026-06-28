@@ -6,7 +6,7 @@
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.core.db import get_db
+from backend.core.db import AsyncSessionFactory, get_db
 from backend.core.security import get_current_user
 from backend.models.db_models import GeneratedRoute, Ride, RideRating, RouteFeedback, User
 from backend.models.schemas import RideRatingRequest, RouteRatingRequest, RatingStats
@@ -29,8 +29,15 @@ async def _increment_and_maybe_retrain(
         db.add(user)
         await db.flush()
         if user.total_ratings % RETRAIN_THRESHOLD == 0:
-            # Run retraining in the background — doesn't block the response
-            background_tasks.add_task(model_service.retrain_model, athlete_id, db)
+            async def _retrain(aid: int):
+                async with AsyncSessionFactory() as s:
+                    try:
+                        await model_service.retrain_model(aid, s)
+                        await s.commit()
+                    except Exception:
+                        await s.rollback()
+                        raise
+            background_tasks.add_task(_retrain, athlete_id)
 
     return user
 

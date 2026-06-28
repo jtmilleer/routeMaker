@@ -80,6 +80,12 @@ class GenerateRequest(BaseModel):
     novelty_factor: float = Field(default=5.0, ge=0.5, le=20.0)
 
 
+class HistoricSite(BaseModel):
+    name: str
+    lat: float
+    lng: float
+
+
 class RouteResult(BaseModel):
     """A single generated route returned to Angular."""
     id: str                          # UUID
@@ -89,6 +95,10 @@ class RouteResult(BaseModel):
     elevation_ft: float
     predicted_score: float
     novelty_pct: Optional[float] = None  # only for novel routes
+    historic_sites: Optional[list[HistoricSite]] = None
+    # Downsampled [distance_mi, elevation_ft] points for the elevation chart.
+    # Populated on generation; omitted on history (not persisted to the DB).
+    elevation_profile: Optional[list[list[float]]] = None
     city_key: str
     route_type: str
     gpx_path: Optional[str] = Field(default=None, exclude=True)

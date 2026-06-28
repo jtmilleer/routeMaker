@@ -16,7 +16,6 @@ import { RouteStateService } from '../../../core/services/route-state.service';
   template: `
     <div class="banner" *ngIf="(state.graphBuilding$ | async) && progress < 100">
       <div class="banner-content">
-        <div class="banner-icon">🗺️</div>
         <div class="banner-text">
           <strong>Building your map</strong>
           <span>Downloading road network from OpenStreetMap — {{ progress }}% complete</span>
@@ -29,18 +28,17 @@ import { RouteStateService } from '../../../core/services/route-state.service';
   `,
   styles: [`
     .banner {
-      background: linear-gradient(90deg, #1a1a2e, #1e2240);
-      border-bottom: 2px solid rgba(252,76,2,0.4);
+      background: linear-gradient(90deg, var(--bg-secondary), #1e2a1e);
+      border-bottom: 2px solid var(--surface-active-border);
       padding: 0.625rem 1.5rem;
       z-index: 50;
     }
     .banner-content { display: flex; align-items: center; gap: 0.75rem; }
-    .banner-icon { font-size: 1.25rem; flex-shrink: 0; }
     .banner-text { flex: 1; }
-    .banner-text strong { color: #fff; font-size: 0.875rem; margin-right: 0.5rem; }
-    .banner-text span { color: #9ca3af; font-size: 0.8rem; }
-    .progress-bar-wrap { width: 120px; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; flex-shrink: 0; }
-    .progress-bar { height: 100%; background: #fc4c02; border-radius: 2px; transition: width 0.5s; }
+    .banner-text strong { color: var(--text-primary); font-size: 0.875rem; margin-right: 0.5rem; }
+    .banner-text span { color: var(--text-muted); font-size: 0.8rem; }
+    .progress-bar-wrap { width: 120px; height: 4px; background: rgba(200, 190, 170, 0.1); border-radius: 2px; flex-shrink: 0; }
+    .progress-bar { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.5s; }
   `]
 })
 export class MapBuildingBannerComponent implements OnInit, OnDestroy {

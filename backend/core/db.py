@@ -11,7 +11,7 @@ from backend.core.config import settings
 
 # Create the async engine.
 # connect_args is SQLite-specific (allows use across threads in async context).
-connect_args = {"check_same_thread": False} if "sqlite" in settings.database_url else {}
+connect_args = {"check_same_thread": False, "timeout": 30} if "sqlite" in settings.database_url else {}
 
 engine = create_async_engine(
     settings.database_url,

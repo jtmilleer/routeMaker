@@ -1,24 +1,30 @@
 {
   "/api": {
-    "target": "http://localhost:8000",
+    "target": "http://127.0.0.1:8000",
     "secure": false,
     "changeOrigin": true,
     "logLevel": "info"
   },
   "/auth/strava": {
-    "target": "http://localhost:8000",
+    "target": "http://127.0.0.1:8000",
     "secure": false,
     "changeOrigin": true,
     "logLevel": "info"
   },
   "/auth/me": {
-    "target": "http://localhost:8000",
+    "target": "http://127.0.0.1:8000",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "info"
+  },
+  "/auth/refresh": {
+    "target": "http://127.0.0.1:8000",
     "secure": false,
     "changeOrigin": true,
     "logLevel": "info"
   },
   "/health": {
-    "target": "http://localhost:8000",
+    "target": "http://127.0.0.1:8000",
     "secure": false,
     "changeOrigin": true
   }
