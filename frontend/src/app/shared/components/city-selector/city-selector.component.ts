@@ -64,12 +64,12 @@ const CITY_DISPLAY_NAMES: Record<string, string> = {
   `,
   styles: [`
     .city-panel { display: flex; flex-direction: column; gap: 0.5rem; }
-    .label { font-size: 0.875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); }
+    .label { font-family: var(--font-mono); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); }
     .city-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.375rem; }
     .city-btn {
       display: flex; align-items: center; gap: 0.375rem;
       background: var(--bg-surface); border: 1px solid var(--border);
-      border-radius: 8px; color: var(--text-muted); padding: 0.5rem 0.625rem; font-size: 0.78rem;
+      border-radius: 3px; color: var(--text-muted); padding: 0.5rem 0.625rem; font-size: 0.78rem;
       font-family: var(--font-primary);
       cursor: pointer; transition: all 0.15s; text-align: left;
     }
@@ -85,13 +85,13 @@ const CITY_DISPLAY_NAMES: Record<string, string> = {
     .coord-input {
       width: 100%; padding: 0.5rem 0.75rem;
       background: var(--bg-surface); border: 1px solid var(--border);
-      border-radius: 8px; color: var(--text-primary); font-size: 0.85rem;
-      font-family: var(--font-primary);
+      border-radius: 3px; color: var(--text-primary); font-size: 0.85rem;
+      font-family: var(--font-mono);
     }
     .coord-input:focus { outline: none; border-color: var(--accent); }
     .set-btn {
       padding: 0.5rem; background: var(--surface-active); border: 1px solid var(--surface-active-border);
-      border-radius: 8px; color: var(--accent); font-size: 0.82rem; font-weight: 600;
+      border-radius: 3px; color: var(--accent); font-size: 0.82rem; font-weight: 600;
       font-family: var(--font-primary); cursor: pointer;
     }
     .hint { font-size: 0.7rem; color: var(--text-dim); margin: 0; }
