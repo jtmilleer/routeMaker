@@ -26,7 +26,7 @@ import { RouteResult } from '../../../core/services/route-api.service';
   `,
   styles: [`
     .results { display: flex; flex-direction: column; gap: 0.5rem; }
-    .section-title { font-size: 0.875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); margin: 0 0 0.25rem; }
+    .section-title { font-family: var(--font-mono); font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); margin: 0 0 0.25rem; }
   `]
 })
 export class RouteResultsComponent {

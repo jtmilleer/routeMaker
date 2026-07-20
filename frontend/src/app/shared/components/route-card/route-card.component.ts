@@ -6,7 +6,7 @@ import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouteResult, RouteApiService } from '../../../core/services/route-api.service';
 
-const RANK_COLORS = ['#c8915a', '#7a9a6d', '#a67c52', '#6b8f71', '#b8976a'];
+const RANK_COLORS = ['#a8471f', '#5f7a52', '#b8862c', '#5c6b73', '#8a4a5c'];
 
 @Component({
   selector: 'app-route-card',
@@ -60,39 +60,39 @@ const RANK_COLORS = ['#c8915a', '#7a9a6d', '#a67c52', '#6b8f71', '#b8976a'];
       background: var(--bg-surface);
       border: 1px solid var(--border);
       border-left: 3px solid transparent;
-      border-radius: 10px;
+      border-radius: 4px;
       padding: 0.75rem;
       cursor: pointer;
       transition: all 0.15s;
     }
     .card:hover { background: var(--surface-hover); }
-    .card.selected { background: rgba(200, 190, 170, 0.1); border-color: rgba(200, 190, 170, 0.2); }
+    .card.selected { background: rgba(60, 46, 30, 0.06); border-color: rgba(60, 46, 30, 0.25); }
 
     .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
-    .rank { font-weight: 800; font-size: 0.85rem; }
-    .score { font-size: 1.25rem; font-weight: 800; color: var(--text-primary); }
-    .score-max { font-size: 0.7rem; color: var(--text-dim); font-weight: 400; }
+    .rank { font-family: var(--font-mono); font-weight: 800; font-size: 0.85rem; }
+    .score { font-family: var(--font-display); font-size: 1.3rem; font-weight: 700; color: var(--text-primary); }
+    .score-max { font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-dim); font-weight: 400; }
 
     .stats { display: flex; gap: 1rem; margin-bottom: 0.625rem; }
     .stat { display: flex; flex-direction: column; }
-    .stat-val { font-size: 0.9rem; font-weight: 700; color: var(--text-primary); }
-    .stat-label { font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; }
+    .stat-val { font-family: var(--font-mono); font-size: 0.9rem; font-weight: 700; color: var(--text-primary); }
+    .stat-label { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; }
 
     .elev-chart { width: 100%; height: 30px; display: block; margin-bottom: 0.625rem; overflow: visible; }
     .elev-line { fill: none; stroke-width: 1.25; vector-effect: non-scaling-stroke; opacity: 0.9; }
-    .elev-area { fill: rgba(200, 145, 90, 0.12); stroke: none; }
+    .elev-area { fill: rgba(168, 71, 31, 0.15); stroke: none; }
 
     .historic-sites { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-bottom: 0.5rem; }
     .site-tag {
-      font-size: 0.7rem; background: rgba(107, 143, 113, 0.15); color: #8fb896;
-      border: 1px solid rgba(107, 143, 113, 0.3); border-radius: 6px; padding: 0.2rem 0.5rem;
+      font-family: var(--font-mono); font-size: 0.68rem; background: rgba(95, 122, 82, 0.14); color: #45592f;
+      border: 1px solid rgba(95, 122, 82, 0.35); border-radius: 3px; padding: 0.2rem 0.5rem;
       max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
 
     .gpx-btn {
       width: 100%; padding: 0.375rem; background: var(--bg-surface);
-      border: 1px solid var(--border); border-radius: 6px;
-      color: var(--text-muted); font-size: 0.75rem; font-family: var(--font-primary);
+      border: 1px solid var(--border); border-radius: 3px;
+      color: var(--text-muted); font-size: 0.75rem; font-family: var(--font-mono);
       cursor: pointer; transition: all 0.15s;
     }
     .gpx-btn:hover:not(:disabled) { background: var(--surface-hover); color: var(--text-primary); }
