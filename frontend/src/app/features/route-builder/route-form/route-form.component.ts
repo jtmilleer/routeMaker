@@ -86,16 +86,16 @@ type RouteType = 'regular' | 'hilly' | 'historic' | 'novel';
   `,
   styles: [`
     .form-panel { display: flex; flex-direction: column; gap: 1rem; }
-    .section-title { font-size: 0.875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); margin: 0 0 0.5rem; }
+    .section-title { font-family: var(--font-mono); font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); margin: 0 0 0.5rem; }
     .form-group { display: flex; flex-direction: column; gap: 0.375rem; }
-    .label { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
+    .label { font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; }
     .val { font-weight: 700; }
     .accent { color: var(--accent); }
 
     .mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.375rem; }
     .mode-btn {
       background: var(--bg-surface); border: 1px solid var(--border);
-      border-radius: 8px; color: var(--text-muted); padding: 0.5rem; font-size: 0.8rem;
+      border-radius: 3px; color: var(--text-muted); padding: 0.5rem; font-size: 0.8rem;
       font-family: var(--font-primary);
       cursor: pointer; transition: all 0.15s; text-align: center;
     }
@@ -107,13 +107,13 @@ type RouteType = 'regular' | 'hilly' | 'historic' | 'novel';
 
     .generate-btn {
       width: 100%; padding: 0.875rem; background: var(--accent);
-      border: none; border-radius: 10px; color: #fff; font-size: 0.95rem;
+      border: none; border-radius: 4px; color: var(--on-accent); font-size: 0.95rem;
       font-weight: 700; font-family: var(--font-primary);
       cursor: pointer; transition: all 0.15s;
-      box-shadow: 0 4px 16px var(--accent-glow);
+      box-shadow: 3px 3px 0 rgba(60, 46, 30, 0.25);
       margin-top: 0.5rem;
     }
-    .generate-btn:hover:not(:disabled) { background: var(--accent-hover); transform: translateY(-1px); box-shadow: 0 6px 24px var(--accent-glow); }
+    .generate-btn:hover:not(:disabled) { background: var(--accent-hover); transform: translate(-1px, -1px); box-shadow: 4px 4px 0 rgba(60, 46, 30, 0.3); }
     .generate-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
     .hint { font-size: 0.75rem; color: var(--text-dim); text-align: center; margin: 0; }
     .error { font-size: 0.75rem; color: #ef4444; margin: 0; }
