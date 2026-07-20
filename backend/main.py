@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.core.config import settings
 from backend.core.db import create_tables
 from backend.models import db_models  # noqa
-from backend.routers import auth, routes, rides, ratings, graph
+from backend.routers import auth, routes, rides, ratings, graph, coverage
 from backend.services.graph_service import seed_preset_cities
 
 # Configure root logging once for the whole app. Modules use
@@ -92,6 +92,7 @@ app.include_router(routes.router)
 app.include_router(rides.router)
 app.include_router(ratings.router)
 app.include_router(graph.router)
+app.include_router(coverage.router)
 
 
 @app.get("/health")

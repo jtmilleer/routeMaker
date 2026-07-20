@@ -149,4 +149,6 @@ async def get_me(
         "model_version": user.model_version,
         "total_ratings": user.total_ratings,
         "model_trained_at": user.model_trained_at,
+        "home_lat": user.home_lat,
+        "home_lng": user.home_lng,
     }

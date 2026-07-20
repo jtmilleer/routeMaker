@@ -56,3 +56,36 @@ async def create_tables():
     import backend.models.db_models  # noqa: F401
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # create_all only creates missing tables — it never ALTERs existing ones.
+        # This project has no migration framework, so add new columns to existing
+        # tables here (idempotent). ALTER TABLE ... ADD COLUMN works on both SQLite
+        # and Postgres, so this stays valid after a future DATABASE_URL swap.
+        await conn.run_sync(_ensure_columns)
+
+
+# Columns that may be missing on an already-created table, by table name.
+# Each entry is (column_name, SQL column type). Keep types ANSI-portable.
+_ADDED_COLUMNS = {
+    "users": [
+        ("home_lat", "FLOAT"),
+        ("home_lng", "FLOAT"),
+    ],
+    "rides": [
+        ("activity_type", "VARCHAR(16) DEFAULT 'ride'"),
+    ],
+}
+
+
+def _ensure_columns(conn):
+    """Add any missing columns listed in _ADDED_COLUMNS. Runs inside run_sync."""
+    from sqlalchemy import inspect, text
+
+    inspector = inspect(conn)
+    existing_tables = set(inspector.get_table_names())
+    for table, columns in _ADDED_COLUMNS.items():
+        if table not in existing_tables:
+            continue  # create_all already made it with all columns
+        present = {c["name"] for c in inspector.get_columns(table)}
+        for name, sql_type in columns:
+            if name not in present:
+                conn.execute(text(f'ALTER TABLE {table} ADD COLUMN {name} {sql_type}'))

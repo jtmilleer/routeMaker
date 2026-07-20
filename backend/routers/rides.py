@@ -38,6 +38,7 @@ async def sync_rides(
                 id=int(row["id"]),
                 athlete_id=athlete_id,
                 name=row["name"],
+                activity_type=row.get("activity_type", "ride"),
                 date=datetime.fromisoformat(row["date"].replace("Z", "+00:00")) if row.get("date") else None,
                 distance_mi=row.get("distance_mi"),
                 elevation_ft=row.get("elevation_ft"),
@@ -70,11 +71,15 @@ async def list_rides(
     athlete_id: int = Depends(get_current_user),
 ):
     """
-    Return all cached rides for this athlete, with user rating merged in.
-    Sorted by date descending (most recent first).
+    Return cached bike rides for this athlete, with user rating merged in.
+    Sorted by date descending (most recent first). Walks/runs are coverage-only
+    and excluded here so they're never rated or fed into the rating model.
     """
     rides_result = await db.execute(
-        select(Ride).where(Ride.athlete_id == athlete_id)
+        select(Ride).where(
+            Ride.athlete_id == athlete_id,
+            Ride.activity_type == "ride",
+        )
         .order_by(Ride.date.desc())
         .limit(limit)
     )

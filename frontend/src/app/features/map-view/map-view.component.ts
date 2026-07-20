@@ -14,6 +14,7 @@ import * as L from 'leaflet';
 
 import { RouteStateService, ActiveCity } from '../../core/services/route-state.service';
 import { RouteResult } from '../../core/services/route-api.service';
+import { decodePolyline } from '../../shared/utils/polyline';
 
 // Fix Leaflet default marker icon path issue with bundlers
 const iconDefault = L.icon({
@@ -25,22 +26,6 @@ const iconDefault = L.icon({
 L.Marker.prototype.options.icon = iconDefault;
 
 const ROUTE_COLORS = ['#c8915a', '#7a9a6d', '#a67c52', '#6b8f71', '#b8976a'];
-
-// Decode a Google encoded polyline string to [lat, lng] pairs
-function decodePolyline(encoded: string): [number, number][] {
-  const points: [number, number][] = [];
-  let idx = 0, lat = 0, lng = 0;
-  while (idx < encoded.length) {
-    let b, shift = 0, result = 0;
-    do { b = encoded.charCodeAt(idx++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
-    lat += (result & 1) ? ~(result >> 1) : (result >> 1);
-    shift = 0; result = 0;
-    do { b = encoded.charCodeAt(idx++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
-    lng += (result & 1) ? ~(result >> 1) : (result >> 1);
-    points.push([lat / 1e5, lng / 1e5]);
-  }
-  return points;
-}
 
 @Component({
   selector: 'app-map-view',

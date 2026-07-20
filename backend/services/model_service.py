@@ -112,7 +112,7 @@ async def retrain_model(athlete_id: int, db: AsyncSession) -> None:
     ride_rows = await db.execute(
         select(Ride, RideRating.rating)
         .join(RideRating, (RideRating.ride_id == Ride.id) & (RideRating.athlete_id == athlete_id))
-        .where(Ride.athlete_id == athlete_id)
+        .where(Ride.athlete_id == athlete_id, Ride.activity_type == "ride")
     )
     ride_data = [
         {

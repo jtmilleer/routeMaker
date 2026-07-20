@@ -11,7 +11,7 @@ import { environment } from '../../../environments/environment';
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface GenerateRequest {
-  route_type: 'regular' | 'hilly' | 'historic' | 'novel';
+  route_type: 'regular' | 'hilly' | 'historic' | 'novel' | 'coverage';
   distance_mi: number;
   tolerance: number;
   start_lat: number;
@@ -81,6 +81,25 @@ export interface PresetCity {
   status: string;
 }
 
+export interface CoverageSegment {
+  polyline: string;
+  ridden: boolean;
+}
+
+export type CoverageActivity = 'walk' | 'ride' | 'both';
+
+export interface CoverageResponse {
+  city_key: string;
+  center_lat: number;
+  center_lng: number;
+  radius_mi: number;
+  activity: CoverageActivity;
+  coverage_pct: number;
+  total_mi: number;
+  ridden_mi: number;
+  segments: CoverageSegment[];
+}
+
 // ── Service ───────────────────────────────────────────────────────────────────
 
 @Injectable({ providedIn: 'root' })
@@ -135,5 +154,23 @@ export class RouteApiService {
 
   getPresetCities(): Observable<PresetCity[]> {
     return this.http.get<PresetCity[]>(`${this.base}/api/graph/presets`);
+  }
+
+  // Coverage
+  setHomeBase(lat: number, lng: number): Observable<{ home_lat: number; home_lng: number; city_key: string }> {
+    return this.http.put<{ home_lat: number; home_lng: number; city_key: string }>(
+      `${this.base}/api/coverage/home`, { lat, lng });
+  }
+
+  getCoverage(radiusMi: number, activity: CoverageActivity): Observable<CoverageResponse> {
+    return this.http.get<CoverageResponse>(`${this.base}/api/coverage`, {
+      params: { radius_mi: radiusMi, activity },
+    });
+  }
+
+  generateCoverageRoute(radiusMi: number, activity: CoverageActivity, distanceMi: number): Observable<RouteResult[]> {
+    return this.http.post<RouteResult[]>(`${this.base}/api/coverage/route`, {
+      radius_mi: radiusMi, activity, distance_mi: distanceMi,
+    });
   }
 }

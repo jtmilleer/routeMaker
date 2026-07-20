@@ -54,9 +54,13 @@ async def generate(
     if G is None:
         raise HTTPException(status_code=503, detail="Graph unavailable")
 
-    # Load user's rides as DataFrame (needed for novel route type)
+    # Load user's rides as DataFrame (needed for novel route type). Only actual
+    # bike rides drive novelty — walks/runs are coverage-only and excluded.
     rides_result = await db.execute(
-        select(Ride).where(Ride.athlete_id == athlete_id)
+        select(Ride).where(
+            Ride.athlete_id == athlete_id,
+            Ride.activity_type == "ride",
+        )
     )
     rides = rides_result.scalars().all()
     import pandas as pd

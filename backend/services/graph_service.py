@@ -79,6 +79,14 @@ def get_graph_status(key: str) -> dict:
                 "node_count": None, "edge_count": None}
     if key in _build_status:
         return {"city_key": key, **_build_status[key]}
+    # No exact-key graph, but the point may already sit inside a nearby graph's
+    # 50km radius — reuse it instead of reporting not_found (which would make the
+    # frontend poll forever / trigger a redundant build). Existence-only check:
+    # never load the 126MB graph here, since this runs on the async event loop.
+    coords = _parse_key(key)
+    if coords and find_covering_key(coords[0], coords[1]) is not None:
+        return {"city_key": key, "status": "ready", "progress_pct": 100,
+                "node_count": None, "edge_count": None}
     return {"city_key": key, "status": "not_found", "progress_pct": 0,
             "node_count": None, "edge_count": None}
 
@@ -97,6 +105,8 @@ def get_graph_sync(lat: float, lng: float) -> Optional[nx.MultiDiGraph]:
     """
     Synchronous graph retrieval (for use inside thread pool during route generation).
     Returns the graph if available in cache or on disk; None if not yet built.
+    Falls back to a nearby covering graph so a custom pin near an existing city
+    reuses that graph instead of failing.
     """
     key = city_key(lat, lng)
     if key in _graph_cache:
@@ -104,6 +114,76 @@ def get_graph_sync(lat: float, lng: float) -> Optional[nx.MultiDiGraph]:
     path = graph_path(key)
     if os.path.exists(path):
         return _load_graph(key)
+    covering = find_covering_graph(lat, lng)
+    if covering is not None:
+        return covering[1]
+    return None
+
+
+# ── Covering-graph lookup (for coverage feature) ───────────────────────────────
+# Each graph spans a ~50km radius, so a point near ANY built graph's center is
+# already inside it. The coverage feature reuses such a graph instead of building
+# a fresh 50km network just because the rounded city_key differs by a notch.
+
+# Leave comfortable interior margin: NETWORK_DIST minus the largest coverage radius
+# (~8km for 5 miles) minus slack for the largest-SCC trim at the graph's edge.
+COVERING_MARGIN_M = 40000
+
+
+def _parse_key(key: str) -> Optional[tuple[float, float]]:
+    """Parse a city_key like "41.59_-93.62" back into (lat, lng)."""
+    try:
+        lat_s, lng_s = key.split("_", 1)
+        return float(lat_s), float(lng_s)
+    except (ValueError, AttributeError):
+        return None
+
+
+def _available_keys() -> set[str]:
+    """All city_keys we could load: in-memory, preset, or on disk."""
+    keys = set(_graph_cache.keys())
+    for la, ln in PRESET_CITIES.values():
+        keys.add(city_key(la, ln))
+    if os.path.isdir(settings.graphs_dir):
+        for f in os.listdir(settings.graphs_dir):
+            if f.endswith(".graphml"):
+                keys.add(f[: -len(".graphml")])
+    return keys
+
+
+def find_covering_key(lat: float, lng: float,
+                      margin_m: float = COVERING_MARGIN_M) -> Optional[str]:
+    """
+    Return the key of the nearest already-available graph whose center is within
+    `margin_m` of (lat, lng) — i.e. one that already contains this point — or None.
+    Existence-only: does NOT load the graph, so it's safe on the async event loop.
+    """
+    best_key = None
+    best_d = None
+    for key in _available_keys():
+        center = _parse_key(key)
+        if center is None:
+            continue
+        d = float(ox.distance.great_circle(lat, lng, center[0], center[1]))
+        if d <= margin_m and (best_d is None or d < best_d):
+            best_key, best_d = key, d
+    return best_key
+
+
+def find_covering_graph(lat: float, lng: float,
+                        margin_m: float = COVERING_MARGIN_M):
+    """
+    Return (key, graph) for the nearest already-available graph whose center is
+    within `margin_m` of (lat, lng) — i.e. one that already contains this point —
+    or None if there isn't one. Loads the graph into cache if needed.
+    """
+    best_key = find_covering_key(lat, lng, margin_m)
+    if best_key is None:
+        return None
+    if best_key in _graph_cache:
+        return best_key, _graph_cache[best_key]
+    if os.path.exists(graph_path(best_key)):
+        return best_key, _load_graph(best_key)
     return None
 
 
@@ -120,6 +200,12 @@ async def request_graph_build(lat: float, lng: float):
 
     if key in _build_status and _build_status[key]["status"] == "building":
         return key  # already in progress
+
+    # Point already sits inside a nearby graph's 50km radius — reuse it rather
+    # than downloading a redundant fresh network. get_graph_status/get_graph_sync
+    # resolve this same key to the covering graph.
+    if find_covering_key(lat, lng) is not None:
+        return key
 
     _build_status[key] = {"status": "building", "progress_pct": 0,
                           "node_count": None, "edge_count": None}

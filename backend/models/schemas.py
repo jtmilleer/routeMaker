@@ -31,6 +31,8 @@ class UserProfile(BaseModel):
     model_version: int
     total_ratings: int
     model_trained_at: Optional[datetime] = None
+    home_lat: Optional[float] = None
+    home_lng: Optional[float] = None
 
 
 # ── Rides ─────────────────────────────────────────────────────────────────────
@@ -68,7 +70,7 @@ class GenerateRequest(BaseModel):
     Parameters sent by Angular when the user clicks Generate.
     All optional fields default to the same values as the original CLI scripts.
     """
-    route_type: str = Field(default="regular", pattern="^(regular|hilly|historic|novel)$")
+    route_type: str = Field(default="regular", pattern="^(regular|hilly|historic|novel|coverage)$")
     distance_mi: float = Field(default=35.0, ge=5, le=150)
     tolerance: float = Field(default=0.25, ge=0.05, le=0.5)
     start_lat: float = Field(..., ge=-90, le=90)
@@ -144,3 +146,38 @@ class GraphRequestBody(BaseModel):
     """POST /api/graph/request — user drops a custom pin."""
     lat: float = Field(..., ge=-90, le=90)
     lng: float = Field(..., ge=-180, le=180)
+
+
+# ── Coverage ────────────────────────────────────────────────────────────────
+
+class HomeBaseRequest(BaseModel):
+    """PUT /api/coverage/home — user sets the center of their coverage area."""
+    lat: float = Field(..., ge=-90, le=90)
+    lng: float = Field(..., ge=-180, le=180)
+
+
+class CoverageSegment(BaseModel):
+    """One street segment in the coverage map: its geometry + ridden flag."""
+    polyline: str          # Google encoded polyline of the edge geometry
+    ridden: bool           # True if the user has ridden this street
+
+
+class CoverageResponse(BaseModel):
+    """GET /api/coverage — coverage stats + per-street segments for the map."""
+    city_key: str
+    center_lat: float
+    center_lng: float
+    radius_mi: float
+    activity: str          # "walk" | "ride" | "both"
+    coverage_pct: float    # ridden_mi / total_mi * 100
+    total_mi: float        # total ridable street miles within the radius
+    ridden_mi: float       # street miles the user has covered
+    segments: list[CoverageSegment]
+
+
+class CoverageRouteRequest(BaseModel):
+    """POST /api/coverage/route — generate loops that fill in uncovered streets."""
+    radius_mi: float = Field(default=1.0, ge=0.25, le=5.0)
+    activity: str = Field(default="ride", pattern="^(walk|ride|both)$")
+    # If omitted, a sensible default is chosen by activity (shorter for walks).
+    distance_mi: Optional[float] = Field(default=None, ge=1.0, le=60.0)

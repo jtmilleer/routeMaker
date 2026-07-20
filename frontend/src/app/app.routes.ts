@@ -35,6 +35,13 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/rate-generated/rate-generated.component').then(m => m.RateGeneratedComponent),
   },
+  // Protected: street coverage map
+  {
+    path: 'app/coverage',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/coverage/coverage.component').then(m => m.CoverageComponent),
+  },
   // Fallback
   { path: '**', redirectTo: '' },
 ];

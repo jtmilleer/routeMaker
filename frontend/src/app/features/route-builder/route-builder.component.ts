@@ -39,6 +39,7 @@ import { LoadingOverlayComponent } from '../../shared/components/loading-overlay
         <div class="nav-links">
           <a routerLink="/app/rate-rides" class="nav-link" id="nav-rate-rides">Rate Rides</a>
           <a routerLink="/app/rate-generated" class="nav-link" id="nav-rate-generated">Rate Generated</a>
+          <a routerLink="/app/coverage" class="nav-link" id="nav-coverage">Coverage</a>
           <div class="nav-user" *ngIf="auth.currentUser() as user">
             <img *ngIf="user.profile_pic_url" [src]="user.profile_pic_url" class="avatar" alt="Profile">
             <span class="user-name">{{ user.name }}</span>

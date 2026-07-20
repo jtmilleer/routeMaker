@@ -17,6 +17,8 @@ export interface UserProfile {
   model_version: number;
   total_ratings: number;
   model_trained_at: string | null;
+  home_lat: number | null;
+  home_lng: number | null;
 }
 
 const TOKEN_KEY = 'rm_jwt';

@@ -5,7 +5,7 @@
 
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { interval, Subscription, switchMap, takeWhile } from 'rxjs';
+import { Subscription, switchMap, takeWhile, timer } from 'rxjs';
 import { RouteApiService } from '../../../core/services/route-api.service';
 import { RouteStateService } from '../../../core/services/route-state.service';
 
@@ -69,12 +69,15 @@ export class MapBuildingBannerComponent implements OnInit, OnDestroy {
 
   private startPolling(): void {
     this.stopPolling();
-    this.pollSub = interval(3000).pipe(
+    this.pollSub = timer(0, 3000).pipe(
       switchMap(() => this.api.getGraphStatus(this.cityKey)),
-      takeWhile(s => s.status !== 'ready' && s.status !== 'error', true),
+      // Keep polling ONLY while actively building. Any other status (ready,
+      // error, not_found) is terminal — emit it once, then complete. This
+      // guarantees polling can never run forever.
+      takeWhile(s => s.status === 'building', true),
     ).subscribe(status => {
       this.progress = status.progress_pct;
-      if (status.status === 'ready') {
+      if (status.status !== 'building') {
         this.state.setGraphBuilding(false);
       }
     });

@@ -22,6 +22,21 @@ STRAVA_API_BASE = "https://www.strava.com/api/v3"
 
 # Minimum bike ride distance to import (mirrors the old MIN_MILES constant)
 MIN_MILES = 10.0
+# Foot activities are shorter — keep a low floor so neighborhood walks/runs count.
+WALK_MIN_MILES = 0.3
+
+# Strava sport_type -> our internal activity_type. Anything not listed is skipped.
+RIDE_SPORT_TYPES = {"Ride", "MountainBikeRide", "GravelRide", "EBikeRide", "VirtualRide"}
+WALK_SPORT_TYPES = {"Walk", "Run", "Hike", "TrailRun", "Snowshoe"}
+
+
+def _activity_category(sport_type: Optional[str]) -> Optional[str]:
+    """Map a Strava sport_type to "ride", "walk", or None (skip)."""
+    if sport_type in RIDE_SPORT_TYPES:
+        return "ride"
+    if sport_type in WALK_SPORT_TYPES:
+        return "walk"
+    return None
 
 # In-memory CSRF state store for the OAuth flow: state -> created_at (epoch).
 # Single-process deployment assumed (same constraint as the graph cache).
@@ -122,10 +137,10 @@ async def refresh_token_if_needed(athlete_id: int, db: AsyncSession) -> str:
 
 # ── Activity Fetching ─────────────────────────────────────────────────────────
 
-async def fetch_activities(access_token: str, max_rides: int = 200) -> list[dict]:
+async def fetch_activities(access_token: str, max_rides: int = 400) -> list[dict]:
     """
-    Page through /athlete/activities and collect all cycling activities.
-    Filters to Ride / MountainBikeRide / GravelRide only.
+    Page through /athlete/activities and collect cycling AND foot activities
+    (walk/run/hike). Other sport types are skipped.
     Stops when an empty page is returned or max_rides is reached.
     """
     headers = {"Authorization": f"Bearer {access_token}"}
@@ -145,11 +160,8 @@ async def fetch_activities(access_token: str, max_rides: int = 200) -> list[dict
             if not batch:
                 break
 
-            bike_rides = [
-                a for a in batch
-                if a.get("sport_type") in ("Ride", "MountainBikeRide", "GravelRide")
-            ]
-            rides.extend(bike_rides)
+            kept = [a for a in batch if _activity_category(a.get("sport_type"))]
+            rides.extend(kept)
             page += 1
 
     return rides[:max_rides]
@@ -163,12 +175,17 @@ def activities_to_df(activities: list[dict]) -> pd.DataFrame:
     """
     rows = []
     for a in activities:
+        category = _activity_category(a.get("sport_type"))
+        if category is None:
+            continue
         distance_mi = round(a.get("distance", 0) * 0.000621371, 1)
-        if distance_mi < MIN_MILES:
+        min_miles = WALK_MIN_MILES if category == "walk" else MIN_MILES
+        if distance_mi < min_miles:
             continue
         rows.append({
             "id": a["id"],
             "name": a["name"],
+            "activity_type": category,
             "date": a.get("start_date_local"),
             "distance_mi": distance_mi,
             "elevation_ft": round(a.get("total_elevation_gain", 0) * 3.28084),

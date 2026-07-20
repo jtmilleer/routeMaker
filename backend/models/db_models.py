@@ -28,6 +28,10 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     last_login: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
+    # Coverage feature: user's saved "home base" — center of the coverage area.
+    home_lat: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    home_lng: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+
     # ML model tracking
     model_version: Mapped[int] = mapped_column(Integer, default=0)
     total_ratings: Mapped[int] = mapped_column(Integer, default=0)
@@ -69,6 +73,9 @@ class Ride(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)  # Strava activity ID
     athlete_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.athlete_id", ondelete="CASCADE"))
     name: Mapped[str] = mapped_column(String(512))
+    # "ride" (cycling) or "walk" (foot: walk/run/hike). Drives coverage filtering;
+    # only "ride" rows feed the cycling ML model.
+    activity_type: Mapped[str] = mapped_column(String(16), default="ride", server_default="ride")
     date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     distance_mi: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     elevation_ft: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
