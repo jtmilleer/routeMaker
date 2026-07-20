@@ -25,7 +25,7 @@ const iconDefault = L.icon({
 });
 L.Marker.prototype.options.icon = iconDefault;
 
-const ROUTE_COLORS = ['#c8915a', '#7a9a6d', '#a67c52', '#6b8f71', '#b8976a'];
+const ROUTE_COLORS = ['#a8471f', '#5f7a52', '#b8862c', '#5c6b73', '#8a4a5c'];
 
 @Component({
   selector: 'app-map-view',
@@ -46,11 +46,11 @@ const ROUTE_COLORS = ['#c8915a', '#7a9a6d', '#a67c52', '#6b8f71', '#b8976a'];
     .idle-state {
       position: absolute; inset: 0; z-index: 2;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      background: rgba(18, 26, 19, 0.85); backdrop-filter: blur(4px);
+      background: rgba(224, 213, 184, 0.88); backdrop-filter: blur(4px);
       pointer-events: none;
       color: var(--text-muted); text-align: center;
     }
-    .idle-state h2 { color: var(--text-primary); margin: 0 0 0.5rem; font-size: 1.5rem; }
+    .idle-state h2 { font-family: var(--font-display); color: var(--text-primary); margin: 0 0 0.5rem; font-size: 1.5rem; }
     .idle-state p { margin: 0; font-size: 0.95rem; }
   `]
 })
@@ -73,8 +73,8 @@ export class MapViewComponent implements AfterViewInit, OnDestroy {
       zoomControl: true,
     });
 
-    // Dark-style tile layer
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    // Warm paper-toned tile layer (Field Guide theme)
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
       attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
       maxZoom: 19,
     }).addTo(this.map);
@@ -125,7 +125,7 @@ export class MapViewComponent implements AfterViewInit, OnDestroy {
 
     const historicIcon = L.divIcon({
       className: 'historic-marker',
-      html: '<div style="background:#6b8f71;color:#fff;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:14px;border:2px solid #c4bfb4;box-shadow:0 2px 6px rgba(0,0,0,0.4);">&#9733;</div>',
+      html: '<div style="background:#5f7a52;color:#efe7d8;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:14px;border:2px solid #efe7d8;box-shadow:0 2px 6px rgba(60,46,30,0.35);">&#9733;</div>',
       iconSize: [24, 24],
       iconAnchor: [12, 12],
     });
@@ -151,7 +151,7 @@ export class MapViewComponent implements AfterViewInit, OnDestroy {
           segments.forEach(seg => {
             const points = decodePolyline(seg.polyline);
             const layer = L.polyline(points, {
-              color: seg.is_new ? color : '#555',
+              color: seg.is_new ? color : '#9a8a72',
               weight: seg.is_new ? 5 : 2,
               opacity: seg.is_new ? 0.9 : 0.5,
             }).addTo(this.map);
