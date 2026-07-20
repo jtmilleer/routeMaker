@@ -1,38 +1,43 @@
 /* Global styles for RouteMaker Angular frontend */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700;9..144,900&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 /* Leaflet map styles */
 @import 'leaflet/dist/leaflet.css';
 
-/* ── Design System: Topo/Cartographic ──────────────────────────────── */
+/* ── Design System: Field Guide / Trail Poster ─────────────────────── */
 :root {
   /* Typography */
   --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-mono: 'JetBrains Mono', 'SFMono-Regular', monospace;
 
-  /* Backgrounds — dark earth tones, like a night-mode topo map */
-  --bg-primary: #121a13;
-  --bg-secondary: #1a2418;
-  --bg-surface: rgba(200, 190, 170, 0.05);
+  /* Backgrounds — warm paper/cream tones */
+  --bg-primary: #e0d5b8;
+  --bg-secondary: #efe7d8;
+  --bg-surface: #efe7d8;
 
-  /* Text hierarchy */
-  --text-primary: #e8e4de;
-  --text-secondary: #c4bfb4;
-  --text-muted: #8a8477;
-  --text-dim: #5e5a52;
+  /* Text hierarchy — ink on paper */
+  --text-primary: #3c2e1e;
+  --text-secondary: #6b5637;
+  --text-muted: #8a6a3a;
+  --text-dim: #a3906f;
 
-  /* Accent — warm amber */
-  --accent: #c8915a;
-  --accent-hover: #daa06d;
-  --accent-glow: rgba(200, 145, 90, 0.3);
+  /* Text placed on top of --accent-colored surfaces (buttons, active chips) */
+  --on-accent: #f4ead4;
 
-  /* Borders — earthy contour-line feel */
-  --border: rgba(200, 190, 170, 0.12);
-  --border-subtle: rgba(200, 190, 170, 0.07);
+  /* Accent — rust / terracotta */
+  --accent: #a8471f;
+  --accent-hover: #c05a2c;
+  --accent-glow: rgba(168, 71, 31, 0.3);
+
+  /* Borders — ink at low opacity */
+  --border: rgba(60, 46, 30, 0.15);
+  --border-subtle: rgba(60, 46, 30, 0.1);
 
   /* Interactive surfaces */
-  --surface-hover: rgba(200, 190, 170, 0.08);
-  --surface-active: rgba(200, 145, 90, 0.12);
-  --surface-active-border: rgba(200, 145, 90, 0.35);
+  --surface-hover: rgba(60, 46, 30, 0.08);
+  --surface-active: rgba(168, 71, 31, 0.12);
+  --surface-active-border: rgba(168, 71, 31, 0.35);
 
   /* Strava brand (only used on the login button) */
   --strava-orange: #fc4c02;
@@ -54,9 +59,9 @@ html, body {
 
 /* Custom scrollbar */
 ::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: rgba(200, 190, 170, 0.03); }
-::-webkit-scrollbar-thumb { background: rgba(200, 190, 170, 0.15); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(200, 190, 170, 0.25); }
+::-webkit-scrollbar-track { background: rgba(60, 46, 30, 0.04); }
+::-webkit-scrollbar-thumb { background: rgba(60, 46, 30, 0.18); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(60, 46, 30, 0.3); }
 
 /* Leaflet popup theming */
 .leaflet-popup-content-wrapper {
