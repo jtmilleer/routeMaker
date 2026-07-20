@@ -21,18 +21,18 @@ import { Component } from '@angular/core';
     .overlay {
       position: absolute; inset: 0; z-index: 10;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      background: rgba(18, 26, 19, 0.88); backdrop-filter: blur(6px);
+      background: rgba(224, 213, 184, 0.92); backdrop-filter: blur(6px);
       color: var(--text-primary); text-align: center; gap: 1rem;
     }
     .spinner-ring {
       width: 56px; height: 56px;
-      border: 4px solid rgba(200, 145, 90, 0.2);
+      border: 4px solid rgba(168, 71, 31, 0.2);
       border-top-color: var(--accent);
       border-radius: 50%;
       animation: spin 0.9s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
-    h3 { margin: 0; font-size: 1.25rem; color: var(--text-primary); }
+    h3 { font-family: var(--font-display); margin: 0; font-size: 1.25rem; color: var(--text-primary); }
     p { margin: 0; color: var(--text-muted); font-size: 0.875rem; }
     .progress-dots { display: flex; gap: 6px; }
     .progress-dots span {

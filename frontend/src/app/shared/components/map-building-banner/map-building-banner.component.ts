@@ -28,16 +28,16 @@ import { RouteStateService } from '../../../core/services/route-state.service';
   `,
   styles: [`
     .banner {
-      background: linear-gradient(90deg, var(--bg-secondary), #1e2a1e);
+      background: linear-gradient(90deg, var(--bg-secondary), #e6dcc4);
       border-bottom: 2px solid var(--surface-active-border);
       padding: 0.625rem 1.5rem;
       z-index: 50;
     }
     .banner-content { display: flex; align-items: center; gap: 0.75rem; }
     .banner-text { flex: 1; }
-    .banner-text strong { color: var(--text-primary); font-size: 0.875rem; margin-right: 0.5rem; }
-    .banner-text span { color: var(--text-muted); font-size: 0.8rem; }
-    .progress-bar-wrap { width: 120px; height: 4px; background: rgba(200, 190, 170, 0.1); border-radius: 2px; flex-shrink: 0; }
+    .banner-text strong { font-family: var(--font-display); color: var(--text-primary); font-size: 0.9rem; margin-right: 0.5rem; }
+    .banner-text span { font-family: var(--font-mono); color: var(--text-muted); font-size: 0.75rem; }
+    .progress-bar-wrap { width: 120px; height: 4px; background: rgba(60, 46, 30, 0.12); border-radius: 2px; flex-shrink: 0; }
     .progress-bar { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.5s; }
   `]
 })
