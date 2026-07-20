@@ -21,6 +21,7 @@ const AUTH_ERROR_MESSAGES: Record<string, string> = {
   template: `
     <div class="landing">
       <div class="hero">
+        <div class="eyebrow">⟡ Field Notes · Custom Routes ⟡</div>
         <div class="wordmark">RouteMaker</div>
         <p class="tagline">Custom cycling routes, built from your ride history.</p>
 
@@ -67,20 +68,28 @@ const AUTH_ERROR_MESSAGES: Record<string, string> = {
       display: flex;
       align-items: center;
       justify-content: center;
-      background: linear-gradient(145deg, var(--bg-primary) 0%, #182118 45%, #1a2418 100%);
+      background: radial-gradient(ellipse at 70% 15%, #e8ddc0 0%, var(--bg-primary) 55%);
       padding: 2rem;
     }
     .hero {
       text-align: center;
       max-width: 520px;
     }
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      color: var(--text-muted);
+      margin-bottom: 0.875rem;
+    }
     .wordmark {
       font-size: 3.5rem;
-      font-weight: 800;
+      font-weight: 900;
       color: var(--text-primary);
       letter-spacing: -1px;
       margin-bottom: 0.75rem;
-      font-family: var(--font-primary);
+      font-family: var(--font-display);
     }
     .tagline {
       font-size: 1.15rem;
@@ -101,18 +110,19 @@ const AUTH_ERROR_MESSAGES: Record<string, string> = {
       gap: 0.75rem;
       background: var(--bg-surface);
       border: 1px solid var(--border);
-      border-radius: 12px;
+      border-radius: 3px;
       padding: 0.875rem 1.25rem;
       color: var(--text-secondary);
       font-size: 0.95rem;
     }
     .feature-marker {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--accent);
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 0.7rem;
+      color: var(--accent);
       flex-shrink: 0;
     }
+    .feature-marker::before { content: '✕'; }
     .strava-btn {
       display: inline-flex;
       align-items: center;
@@ -120,27 +130,27 @@ const AUTH_ERROR_MESSAGES: Record<string, string> = {
       background: var(--strava-orange);
       color: #fff;
       border: none;
-      border-radius: 12px;
+      border-radius: 4px;
       padding: 1rem 2rem;
       font-size: 1.05rem;
       font-weight: 700;
       font-family: var(--font-primary);
       cursor: pointer;
       transition: transform 0.15s, box-shadow 0.15s;
-      box-shadow: 0 4px 24px rgba(252, 76, 2, 0.35);
+      box-shadow: 3px 3px 0 rgba(60, 46, 30, 0.25);
       width: 100%;
       justify-content: center;
     }
     .strava-btn:hover:not(:disabled) {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 32px rgba(252, 76, 2, 0.5);
+      transform: translate(-1px, -1px);
+      box-shadow: 4px 4px 0 rgba(60, 46, 30, 0.3);
     }
     .strava-btn:disabled { opacity: 0.6; cursor: not-allowed; }
     .auth-error {
-      background: rgba(200, 80, 60, 0.12);
-      border: 1px solid rgba(200, 80, 60, 0.35);
-      color: #e08a78;
-      border-radius: 10px;
+      background: rgba(178, 58, 46, 0.1);
+      border: 1px solid rgba(178, 58, 46, 0.35);
+      color: #8a3626;
+      border-radius: 4px;
       padding: 0.75rem 1rem;
       margin-bottom: 1rem;
       font-size: 0.9rem;
