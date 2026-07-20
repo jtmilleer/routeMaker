@@ -75,13 +75,13 @@ import { LoadingOverlayComponent } from '../../shared/components/loading-overlay
     .topnav {
       display: flex; align-items: center; justify-content: space-between;
       padding: 0 1.5rem; height: 56px; min-height: 56px;
-      background: rgba(18, 26, 19, 0.95);
+      background: rgba(224, 213, 184, 0.95);
       border-bottom: 1px solid var(--border);
       backdrop-filter: blur(12px);
       z-index: 100;
     }
     .nav-brand { display: flex; align-items: center; gap: 0.5rem; }
-    .brand-name { font-size: 1.25rem; font-weight: 800; color: var(--text-primary); }
+    .brand-name { font-size: 1.25rem; font-weight: 700; color: var(--text-primary); font-family: var(--font-display); }
 
     .nav-links { display: flex; align-items: center; gap: 1rem; }
     .nav-link { color: var(--text-muted); text-decoration: none; font-size: 0.875rem; font-weight: 500; transition: color 0.15s; }
@@ -89,15 +89,15 @@ import { LoadingOverlayComponent } from '../../shared/components/loading-overlay
     .nav-user { display: flex; align-items: center; gap: 0.5rem; }
     .avatar { width: 28px; height: 28px; border-radius: 50%; }
     .user-name { font-size: 0.875rem; color: var(--text-secondary); }
-    .model-badge { font-size: 0.7rem; background: var(--surface-active); color: var(--accent); border-radius: 4px; padding: 2px 6px; font-weight: 600; }
-    .logout-btn { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text-muted); padding: 0.375rem 0.75rem; font-size: 0.8rem; font-family: var(--font-primary); cursor: pointer; transition: all 0.15s; }
+    .model-badge { font-size: 0.7rem; font-family: var(--font-mono); background: var(--surface-active); color: var(--accent); border-radius: 3px; padding: 2px 6px; font-weight: 600; }
+    .logout-btn { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 4px; color: var(--text-muted); padding: 0.375rem 0.75rem; font-size: 0.8rem; font-family: var(--font-primary); cursor: pointer; transition: all 0.15s; }
     .logout-btn:hover { background: var(--surface-hover); color: var(--text-primary); }
 
     .main-layout { display: flex; flex: 1; overflow: hidden; }
 
     .sidebar {
       width: 320px; min-width: 320px;
-      background: rgba(200, 190, 170, 0.03);
+      background: rgba(60, 46, 30, 0.03);
       border-right: 1px solid var(--border);
       display: flex; flex-direction: column; overflow-y: auto;
       padding: 1rem;
