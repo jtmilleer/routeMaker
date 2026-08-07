@@ -4,7 +4,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #0f0f1a;
+  background: var(--bg-primary);
   z-index: 9999;
 }
 

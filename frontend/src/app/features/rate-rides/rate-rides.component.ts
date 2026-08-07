@@ -114,7 +114,7 @@ function decodePolyline(encoded: string): [number, number][] {
   `,
   styles: [`
     .page { min-height: 100vh; background: var(--bg-primary); color: var(--text-primary); padding: 2rem; font-family: var(--font-primary); }
-    .page-title, .ride-name { font-family: var(--font-display); }
+    .page-title, .ride-name, .done-state h2 { font-family: var(--font-display); }
     .page-nav { display: flex; align-items: center; gap: 1.5rem; margin-bottom: 1.5rem; }
     .back-link { color: var(--text-dim); text-decoration: none; font-size: 0.875rem; }
     .back-link:hover { color: var(--text-primary); }
@@ -175,7 +175,7 @@ function decodePolyline(encoded: string): [number, number][] {
     .done-state p { color: var(--text-muted); margin: 0; }
     .back-btn {
       padding: 0.625rem 1.5rem; background: var(--accent); color: var(--on-accent);
-      border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.9rem;
+      border-radius: 4px; text-decoration: none; font-weight: 600; font-size: 0.9rem;
     }
     .spinner { width: 32px; height: 32px; border: 3px solid rgba(168, 71, 31, 0.2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
@@ -248,7 +248,7 @@ export class RateRidesComponent implements OnInit, AfterViewChecked {
       touchZoom: false,
     });
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
       maxZoom: 18,
     }).addTo(this.map);
 

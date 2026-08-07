@@ -93,7 +93,7 @@ import { RouteApiService, RouteResult, RatingStats } from '../../core/services/r
   `,
   styles: [`
     .page { min-height: 100vh; background: var(--bg-primary); color: var(--text-primary); padding: 2rem; font-family: var(--font-primary); }
-    .page-title, .route-label { font-family: var(--font-display); }
+    .page-title, .route-label, .comparison-card h3, .done-state h2 { font-family: var(--font-display); }
     .page-nav { display: flex; align-items: center; gap: 1.5rem; margin-bottom: 1.5rem; }
     .back-link { color: var(--text-dim); text-decoration: none; font-size: 0.875rem; }
     .back-link:hover { color: var(--text-primary); }
