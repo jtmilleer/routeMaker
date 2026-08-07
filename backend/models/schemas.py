@@ -103,6 +103,7 @@ class RouteResult(BaseModel):
     elevation_profile: Optional[list[list[float]]] = None
     city_key: str
     route_type: str
+    user_rating: Optional[int] = None  # Joined from route_feedback; None if not yet rated
     gpx_path: Optional[str] = Field(default=None, exclude=True)
 
 
@@ -129,6 +130,12 @@ class RatingStats(BaseModel):
     model_version: int
     ratings_until_next_retrain: int
     model_trained_at: Optional[datetime] = None
+
+
+class PendingCounts(BaseModel):
+    """GET /api/ratings/pending-counts — powers the Rate nav badge."""
+    unrated_rides: int
+    unrated_routes: int
 
 
 # ── Graph ─────────────────────────────────────────────────────────────────────
