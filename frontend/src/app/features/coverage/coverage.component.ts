@@ -25,8 +25,8 @@ const iconDefault = L.icon({
 });
 L.Marker.prototype.options.icon = iconDefault;
 
-const RIDDEN_COLOR = '#7a9a6d';    // green — streets you've ridden
-const UNRIDDEN_COLOR = '#c0584e';  // red — streets you haven't
+const RIDDEN_COLOR = '#5f7a52';    // sage green — streets you've ridden
+const UNRIDDEN_COLOR = '#b23a2e';  // red — streets you haven't
 const DEFAULT_CENTER: [number, number] = [41.6543, -91.5267];  // Iowa City
 
 @Component({
@@ -127,7 +127,8 @@ const DEFAULT_CENTER: [number, number] = [41.6543, -91.5267];  // Iowa City
   styles: [`
     :host { display: block; height: 100vh; overflow: hidden; }
     .shell { display: flex; flex-direction: column; height: 100vh; background: var(--bg-primary); color: var(--text-primary); font-family: var(--font-primary); }
-    .topnav { display: flex; align-items: center; justify-content: space-between; padding: 0 1.5rem; height: 56px; min-height: 56px; background: rgba(18,26,19,0.95); border-bottom: 1px solid var(--border); }
+    .topnav { display: flex; align-items: center; justify-content: space-between; padding: 0 1.5rem; height: 56px; min-height: 56px; background: rgba(224,213,184,0.95); border-bottom: 1px solid var(--border); }
+    .brand { font-family: var(--font-display); }
     .brand { font-size: 1.25rem; font-weight: 800; }
     .nav-links { display: flex; align-items: center; gap: 1rem; }
     .nav-link { color: var(--text-muted); text-decoration: none; font-size: 0.875rem; }
@@ -135,34 +136,34 @@ const DEFAULT_CENTER: [number, number] = [41.6543, -91.5267];  // Iowa City
     .logout-btn { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text-muted); padding: 0.375rem 0.75rem; font-size: 0.8rem; cursor: pointer; }
     .body { display: flex; flex: 1; overflow: hidden; }
     .sidebar { width: 320px; min-width: 320px; padding: 1.25rem; border-right: 1px solid var(--border); overflow-y: auto; }
-    h1 { font-size: 1.1rem; margin: 0 0 1rem; }
+    h1 { font-family: var(--font-display); font-size: 1.2rem; margin: 0 0 1rem; }
     .panel { display: flex; flex-direction: column; gap: 0.85rem; }
     .hint { color: var(--text-muted); font-size: 0.85rem; line-height: 1.4; margin: 0; }
     .coords { font-family: monospace; font-size: 0.8rem; color: var(--text-secondary); margin: 0; }
     .stat { display: flex; align-items: baseline; gap: 0.5rem; }
-    .pct { font-size: 2.4rem; font-weight: 800; color: var(--accent, #c8915a); }
+    .pct { font-family: var(--font-mono); font-size: 2.4rem; font-weight: 800; color: var(--accent, #a8471f); }
     .stat-label { color: var(--text-muted); }
     .miles { margin: 0; color: var(--text-secondary); font-size: 0.9rem; }
     .field { display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.85rem; color: var(--text-secondary); }
     .field input[type=range] { width: 100%; }
     .toggle { display: flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
     .toggle button { flex: 1; background: transparent; border: none; color: var(--text-muted); padding: 0.5rem; cursor: pointer; font-family: var(--font-primary); font-size: 0.85rem; }
-    .toggle button.active { background: var(--accent, #c8915a); color: #1a1a1a; font-weight: 700; }
+    .toggle button.active { background: var(--accent, #a8471f); color: var(--on-accent, #f4ead4); font-weight: 700; }
     .legend { display: flex; gap: 1rem; font-size: 0.8rem; color: var(--text-muted); }
     .swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: middle; margin-right: 4px; }
     hr { border: none; border-top: 1px solid var(--border); width: 100%; margin: 0.25rem 0; }
-    .primary { background: var(--accent, #c8915a); border: none; border-radius: 8px; color: #1a1a1a; padding: 0.6rem 0.75rem; font-weight: 700; cursor: pointer; font-family: var(--font-primary); }
+    .primary { background: var(--accent, #a8471f); border: none; border-radius: 4px; color: var(--on-accent, #f4ead4); padding: 0.6rem 0.75rem; font-weight: 700; cursor: pointer; font-family: var(--font-primary); box-shadow: 3px 3px 0 rgba(60, 46, 30, 0.25); }
     .primary:disabled { opacity: 0.6; cursor: default; }
     .ghost { background: transparent; border: 1px solid var(--border); border-radius: 8px; color: var(--text-muted); padding: 0.5rem; cursor: pointer; font-family: var(--font-primary); }
-    .error { color: #d9776c; font-size: 0.82rem; margin: 0; }
+    .error { color: #8a3626; font-size: 0.82rem; margin: 0; }
     .routes { display: flex; flex-direction: column; gap: 0.4rem; }
     .route-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; color: var(--text-secondary); }
-    .link { background: none; border: none; color: var(--accent, #c8915a); cursor: pointer; font-size: 0.82rem; }
+    .link { background: none; border: none; color: var(--accent, #a8471f); cursor: pointer; font-size: 0.82rem; }
     .bar { width: 100%; height: 6px; background: var(--bg-surface); border-radius: 3px; overflow: hidden; }
-    .bar-fill { height: 100%; background: var(--accent, #c8915a); transition: width 0.3s; }
+    .bar-fill { height: 100%; background: var(--accent, #a8471f); transition: width 0.3s; }
     .map-area { flex: 1; position: relative; }
     .map { width: 100%; height: 100%; }
-    .loading { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); background: rgba(18,26,19,0.9); padding: 0.4rem 0.9rem; border-radius: 8px; font-size: 0.85rem; z-index: 500; }
+    .loading { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); background: rgba(224,213,184,0.92); color: var(--text-primary); padding: 0.4rem 0.9rem; border-radius: 4px; font-size: 0.85rem; z-index: 500; border: 1px solid var(--border); }
   `],
 })
 export class CoverageComponent implements AfterViewInit, OnDestroy {
@@ -210,7 +211,7 @@ export class CoverageComponent implements AfterViewInit, OnDestroy {
       : DEFAULT_CENTER;
 
     this.map = L.map(this.mapEl.nativeElement, { center, zoom: hasHome ? 14 : 12 });
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
       attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 19,
     }).addTo(this.map);
     this.coverageLayer.addTo(this.map);
@@ -381,7 +382,7 @@ export class CoverageComponent implements AfterViewInit, OnDestroy {
     if (this.radiusCircle) this.map.removeLayer(this.radiusCircle);
     this.radiusCircle = L.circle([resp.center_lat, resp.center_lng], {
       radius: resp.radius_mi * 1609.34,
-      color: '#888', weight: 1, fill: false, dashArray: '4 6',
+      color: '#9a8a72', weight: 1, fill: false, dashArray: '4 6',
     }).addTo(this.map);
     this.map.fitBounds(this.radiusCircle.getBounds(), { padding: [20, 20] });
   }
@@ -407,13 +408,13 @@ export class CoverageComponent implements AfterViewInit, OnDestroy {
       const segs: { polyline: string; is_new: boolean }[] = JSON.parse(r.route_segments);
       for (const seg of segs) {
         L.polyline(decodePolyline(seg.polyline), {
-          color: seg.is_new ? '#e0a458' : '#666',
+          color: seg.is_new ? '#a8471f' : '#9a8a72',
           weight: seg.is_new ? 5 : 3,
           opacity: seg.is_new ? 0.95 : 0.6,
         }).addTo(this.routeLayer);
       }
     } else if (r.polyline) {
-      L.polyline(decodePolyline(r.polyline), { color: '#e0a458', weight: 5 }).addTo(this.routeLayer);
+      L.polyline(decodePolyline(r.polyline), { color: '#a8471f', weight: 5 }).addTo(this.routeLayer);
     }
   }
 
