@@ -93,6 +93,7 @@ import { RouteApiService, RouteResult, RatingStats } from '../../core/services/r
   `,
   styles: [`
     .page { min-height: 100vh; background: var(--bg-primary); color: var(--text-primary); padding: 2rem; font-family: var(--font-primary); }
+    .page-title, .route-label { font-family: var(--font-display); }
     .page-nav { display: flex; align-items: center; gap: 1.5rem; margin-bottom: 1.5rem; }
     .back-link { color: var(--text-dim); text-decoration: none; font-size: 0.875rem; }
     .back-link:hover { color: var(--text-primary); }
@@ -129,7 +130,7 @@ import { RouteApiService, RouteResult, RatingStats } from '../../core/services/r
       font-family: var(--font-primary); cursor: pointer; transition: all 0.12s;
     }
     .rating-btn:hover { background: var(--surface-active); border-color: var(--surface-active-border); color: var(--accent); }
-    .rating-btn.selected { background: rgba(200, 145, 90, 0.2); border-color: var(--accent); color: var(--accent); }
+    .rating-btn.selected { background: rgba(168, 71, 31, 0.16); border-color: var(--accent); color: var(--accent); }
 
     .skip-btn { background: none; border: none; color: var(--text-dim); font-size: 0.8rem; font-family: var(--font-primary); cursor: pointer; align-self: center; }
 
@@ -146,15 +147,15 @@ import { RouteApiService, RouteResult, RatingStats } from '../../core/services/r
     .compare-arrow { font-size: 1.5rem; color: var(--text-dim); }
     .compare-label { font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase; }
     .compare-note { color: var(--text-muted); font-size: 0.85rem; margin: 0; }
-    .next-btn { padding: 0.625rem 1.5rem; background: var(--accent); color: #fff; border: none; border-radius: 8px; font-weight: 600; font-family: var(--font-primary); cursor: pointer; }
+    .next-btn { padding: 0.625rem 1.5rem; background: var(--accent); color: var(--on-accent); border: none; border-radius: 4px; font-weight: 600; font-family: var(--font-primary); cursor: pointer; }
 
     .done-state, .loading-state {
       max-width: 400px; margin: 4rem auto; text-align: center;
       display: flex; flex-direction: column; align-items: center; gap: 1rem;
     }
     .done-state h2 { margin: 0; color: var(--text-primary); }
-    .back-btn { padding: 0.625rem 1.5rem; background: var(--accent); color: #fff; border-radius: 8px; text-decoration: none; font-weight: 600; }
-    .spinner { width: 32px; height: 32px; border: 3px solid rgba(200, 145, 90, 0.2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+    .back-btn { padding: 0.625rem 1.5rem; background: var(--accent); color: var(--on-accent); border-radius: 4px; text-decoration: none; font-weight: 600; }
+    .spinner { width: 32px; height: 32px; border: 3px solid rgba(168, 71, 31, 0.2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
   `]
 })
