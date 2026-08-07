@@ -4,12 +4,13 @@
 #          retraining as a background task when the threshold is hit.
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.db import AsyncSessionFactory, get_db
 from backend.core.security import get_current_user
 from backend.models.db_models import GeneratedRoute, Ride, RideRating, RouteFeedback, User
-from backend.models.schemas import RideRatingRequest, RouteRatingRequest, RatingStats
+from backend.models.schemas import PendingCounts, RideRatingRequest, RouteRatingRequest, RatingStats
 from backend.services import model_service
 
 router = APIRouter(prefix="/api/ratings", tags=["ratings"])
@@ -128,3 +129,34 @@ async def get_rating_stats(
 ):
     """Return model training progress stats for the dashboard."""
     return await _get_stats(athlete_id, db)
+
+
+@router.get("/pending-counts", response_model=PendingCounts)
+async def get_pending_counts(
+    db: AsyncSession = Depends(get_db),
+    athlete_id: int = Depends(get_current_user),
+):
+    """Count unrated rides and unrated generated routes, for the nav badge."""
+    total_rides = (await db.execute(
+        select(func.count()).select_from(Ride).where(
+            Ride.athlete_id == athlete_id,
+            Ride.activity_type == "ride",
+        )
+    )).scalar_one()
+
+    rated_rides = (await db.execute(
+        select(func.count()).select_from(RideRating).where(RideRating.athlete_id == athlete_id)
+    )).scalar_one()
+
+    total_routes = (await db.execute(
+        select(func.count()).select_from(GeneratedRoute).where(GeneratedRoute.athlete_id == athlete_id)
+    )).scalar_one()
+
+    rated_routes = (await db.execute(
+        select(func.count()).select_from(RouteFeedback).where(RouteFeedback.athlete_id == athlete_id)
+    )).scalar_one()
+
+    return PendingCounts(
+        unrated_rides=max(total_rides - rated_rides, 0),
+        unrated_routes=max(total_routes - rated_routes, 0),
+    )
