@@ -114,6 +114,7 @@ function decodePolyline(encoded: string): [number, number][] {
   `,
   styles: [`
     .page { min-height: 100vh; background: var(--bg-primary); color: var(--text-primary); padding: 2rem; font-family: var(--font-primary); }
+    .page-title, .ride-name { font-family: var(--font-display); }
     .page-nav { display: flex; align-items: center; gap: 1.5rem; margin-bottom: 1.5rem; }
     .back-link { color: var(--text-dim); text-decoration: none; font-size: 0.875rem; }
     .back-link:hover { color: var(--text-primary); }
@@ -160,7 +161,7 @@ function decodePolyline(encoded: string): [number, number][] {
       font-family: var(--font-primary); cursor: pointer; transition: all 0.12s;
     }
     .rating-btn:hover { background: var(--surface-active); border-color: var(--surface-active-border); color: var(--accent); }
-    .rating-btn.selected { background: rgba(200, 145, 90, 0.2); border-color: var(--accent); color: var(--accent); }
+    .rating-btn.selected { background: rgba(168, 71, 31, 0.16); border-color: var(--accent); color: var(--accent); }
 
     .skip-row { text-align: center; }
     .skip-btn { background: none; border: none; color: var(--text-dim); font-size: 0.8rem; font-family: var(--font-primary); cursor: pointer; }
@@ -173,10 +174,10 @@ function decodePolyline(encoded: string): [number, number][] {
     .done-state h2 { margin: 0; color: var(--text-primary); }
     .done-state p { color: var(--text-muted); margin: 0; }
     .back-btn {
-      padding: 0.625rem 1.5rem; background: var(--accent); color: #fff;
+      padding: 0.625rem 1.5rem; background: var(--accent); color: var(--on-accent);
       border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.9rem;
     }
-    .spinner { width: 32px; height: 32px; border: 3px solid rgba(200, 145, 90, 0.2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+    .spinner { width: 32px; height: 32px; border: 3px solid rgba(168, 71, 31, 0.2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
   `]
 })
@@ -251,7 +252,7 @@ export class RateRidesComponent implements OnInit, AfterViewChecked {
       maxZoom: 18,
     }).addTo(this.map);
 
-    const line = L.polyline(points, { color: '#c8915a', weight: 3, opacity: 0.9 }).addTo(this.map);
+    const line = L.polyline(points, { color: '#a8471f', weight: 3, opacity: 0.9 }).addTo(this.map);
     this.map.fitBounds(line.getBounds(), { padding: [20, 20] });
   }
 
