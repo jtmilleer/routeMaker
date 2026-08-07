@@ -128,8 +128,7 @@ const DEFAULT_CENTER: [number, number] = [41.6543, -91.5267];  // Iowa City
     :host { display: block; height: 100vh; overflow: hidden; }
     .shell { display: flex; flex-direction: column; height: 100vh; background: var(--bg-primary); color: var(--text-primary); font-family: var(--font-primary); }
     .topnav { display: flex; align-items: center; justify-content: space-between; padding: 0 1.5rem; height: 56px; min-height: 56px; background: rgba(224,213,184,0.95); border-bottom: 1px solid var(--border); }
-    .brand { font-family: var(--font-display); }
-    .brand { font-size: 1.25rem; font-weight: 800; }
+    .brand { font-family: var(--font-display); font-size: 1.25rem; font-weight: 700; }
     .nav-links { display: flex; align-items: center; gap: 1rem; }
     .nav-link { color: var(--text-muted); text-decoration: none; font-size: 0.875rem; }
     .nav-link:hover { color: var(--text-primary); }

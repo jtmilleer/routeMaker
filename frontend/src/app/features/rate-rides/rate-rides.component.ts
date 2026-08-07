@@ -176,7 +176,9 @@ function decodePolyline(encoded: string): [number, number][] {
     .back-btn {
       padding: 0.625rem 1.5rem; background: var(--accent); color: var(--on-accent);
       border-radius: 4px; text-decoration: none; font-weight: 600; font-size: 0.9rem;
+      display: inline-block; box-shadow: 3px 3px 0 rgba(60, 46, 30, 0.25); transition: all 0.15s;
     }
+    .back-btn:hover { background: var(--accent-hover); transform: translate(-1px, -1px); box-shadow: 4px 4px 0 rgba(60, 46, 30, 0.3); }
     .spinner { width: 32px; height: 32px; border: 3px solid rgba(168, 71, 31, 0.2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
   `]

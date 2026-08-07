@@ -116,7 +116,7 @@ type RouteType = 'regular' | 'hilly' | 'historic' | 'novel';
     .generate-btn:hover:not(:disabled) { background: var(--accent-hover); transform: translate(-1px, -1px); box-shadow: 4px 4px 0 rgba(60, 46, 30, 0.3); }
     .generate-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
     .hint { font-size: 0.75rem; color: var(--text-dim); text-align: center; margin: 0; }
-    .error { font-size: 0.75rem; color: #ef4444; margin: 0; }
+    .error { font-size: 0.75rem; color: #8a3626; margin: 0; }
   `]
 })
 export class RouteFormComponent {

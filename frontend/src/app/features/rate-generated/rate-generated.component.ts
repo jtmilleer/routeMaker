@@ -147,14 +147,16 @@ import { RouteApiService, RouteResult, RatingStats } from '../../core/services/r
     .compare-arrow { font-size: 1.5rem; color: var(--text-dim); }
     .compare-label { font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase; }
     .compare-note { color: var(--text-muted); font-size: 0.85rem; margin: 0; }
-    .next-btn { padding: 0.625rem 1.5rem; background: var(--accent); color: var(--on-accent); border: none; border-radius: 4px; font-weight: 600; font-family: var(--font-primary); cursor: pointer; }
+    .next-btn { padding: 0.625rem 1.5rem; background: var(--accent); color: var(--on-accent); border: none; border-radius: 4px; font-weight: 600; font-family: var(--font-primary); cursor: pointer; box-shadow: 3px 3px 0 rgba(60, 46, 30, 0.25); transition: all 0.15s; }
+    .next-btn:hover { background: var(--accent-hover); transform: translate(-1px, -1px); box-shadow: 4px 4px 0 rgba(60, 46, 30, 0.3); }
 
     .done-state, .loading-state {
       max-width: 400px; margin: 4rem auto; text-align: center;
       display: flex; flex-direction: column; align-items: center; gap: 1rem;
     }
     .done-state h2 { margin: 0; color: var(--text-primary); }
-    .back-btn { padding: 0.625rem 1.5rem; background: var(--accent); color: var(--on-accent); border-radius: 4px; text-decoration: none; font-weight: 600; }
+    .back-btn { padding: 0.625rem 1.5rem; background: var(--accent); color: var(--on-accent); border-radius: 4px; text-decoration: none; font-weight: 600; display: inline-block; box-shadow: 3px 3px 0 rgba(60, 46, 30, 0.25); transition: all 0.15s; }
+    .back-btn:hover { background: var(--accent-hover); transform: translate(-1px, -1px); box-shadow: 4px 4px 0 rgba(60, 46, 30, 0.3); }
     .spinner { width: 32px; height: 32px; border: 3px solid rgba(168, 71, 31, 0.2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
   `]
