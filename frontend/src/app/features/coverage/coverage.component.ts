@@ -153,6 +153,7 @@ const DEFAULT_CENTER: [number, number] = [41.6543, -91.5267];  // Iowa City
     .swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: middle; margin-right: 4px; }
     hr { border: none; border-top: 1px solid var(--border); width: 100%; margin: 0.25rem 0; }
     .primary { background: var(--accent, #a8471f); border: none; border-radius: 4px; color: var(--on-accent, #f4ead4); padding: 0.6rem 0.75rem; font-weight: 700; cursor: pointer; font-family: var(--font-primary); box-shadow: 3px 3px 0 rgba(60, 46, 30, 0.25); }
+    .primary:hover:not(:disabled) { background: var(--accent-hover); transform: translate(-1px, -1px); box-shadow: 4px 4px 0 rgba(60, 46, 30, 0.3); }
     .primary:disabled { opacity: 0.6; cursor: default; }
     .ghost { background: transparent; border: 1px solid var(--border); border-radius: 8px; color: var(--text-muted); padding: 0.5rem; cursor: pointer; font-family: var(--font-primary); }
     .error { color: #8a3626; font-size: 0.82rem; margin: 0; }
