@@ -39,6 +39,7 @@ export interface RouteResult {
   elevation_profile?: number[][];   // [distance_mi, elevation_ft] points
   city_key: string;
   route_type: string;
+  user_rating?: number | null;   // Joined from route_feedback; null if not yet rated
 }
 
 export interface Ride {
@@ -63,6 +64,11 @@ export interface RatingStats {
   model_version: number;
   ratings_until_next_retrain: number;
   model_trained_at: string | null;
+}
+
+export interface PendingCounts {
+  unrated_rides: number;
+  unrated_routes: number;
 }
 
 export interface GraphStatus {
@@ -141,6 +147,10 @@ export class RouteApiService {
 
   getRatingStats(): Observable<RatingStats> {
     return this.http.get<RatingStats>(`${this.base}/api/ratings/stats`);
+  }
+
+  getPendingCounts(): Observable<PendingCounts> {
+    return this.http.get<PendingCounts>(`${this.base}/api/ratings/pending-counts`);
   }
 
   // Graph / cities
