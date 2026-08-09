@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.db import get_db
 from backend.core.security import get_current_user
-from backend.models.db_models import GeneratedRoute, Ride
+from backend.models.db_models import GeneratedRoute, Ride, RouteFeedback
 from backend.models.schemas import GenerateRequest, RouteResult
 from backend.services import graph_service, model_service, route_service, strava_service
 
@@ -136,7 +136,8 @@ async def get_history(
     db: AsyncSession = Depends(get_db),
     athlete_id: int = Depends(get_current_user),
 ):
-    """Return the user's previously generated routes (most recent first)."""
+    """Return the user's previously generated routes (most recent first), with
+    each route's rating merged in (null if not yet rated)."""
     result = await db.execute(
         select(GeneratedRoute)
         .where(GeneratedRoute.athlete_id == athlete_id)
@@ -144,6 +145,12 @@ async def get_history(
         .limit(limit)
     )
     rows = result.scalars().all()
+
+    feedback_result = await db.execute(
+        select(RouteFeedback).where(RouteFeedback.athlete_id == athlete_id)
+    )
+    ratings_map = {f.route_id: f.rating for f in feedback_result.scalars().all()}
+
     return [
         RouteResult(
             id=r.id,
@@ -155,6 +162,7 @@ async def get_history(
             novelty_pct=r.novelty_pct,
             city_key=r.city_key or "",
             route_type=r.route_type,
+            user_rating=ratings_map.get(r.id),
         )
         for r in rows
     ]
