@@ -124,7 +124,7 @@ export class RouteApiService {
   }
 
   getRouteHistory(): Observable<RouteResult[]> {
-    return this.http.get<RouteResult[]>(`${this.base}/api/routes/history`);
+    return this.http.get<RouteResult[]>(`${this.base}/api/routes/history`, { params: { limit: 200 } });
   }
 
   // Rides

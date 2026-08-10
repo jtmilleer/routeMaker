@@ -8,6 +8,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouteApiService, GenerateRequest } from '../../../core/services/route-api.service';
 import { RouteStateService } from '../../../core/services/route-state.service';
+import { PendingRatingsService } from '../../../core/services/pending-ratings.service';
 
 type RouteType = 'regular' | 'hilly' | 'historic' | 'novel';
 
@@ -135,7 +136,7 @@ export class RouteFormComponent {
     { value: 'novel' as RouteType, label: 'Novel' },
   ];
 
-  constructor(private api: RouteApiService, public state: RouteStateService) {}
+  constructor(private api: RouteApiService, public state: RouteStateService, private pending: PendingRatingsService) {}
 
   generate(): void {
     const city = this.state['_activeCity'].value;
@@ -160,6 +161,7 @@ export class RouteFormComponent {
       next: routes => {
         this.state.setRoutes(routes);
         this.state.setLoading(false);
+        this.pending.refresh();
       },
       error: err => {
         this.error = err.error?.detail ?? 'Generation failed. Please try again.';

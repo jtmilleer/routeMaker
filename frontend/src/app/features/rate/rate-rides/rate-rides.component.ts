@@ -300,6 +300,7 @@ export class RateRidesComponent implements OnInit, AfterViewChecked {
         this.syncMsg = `${s.new_rides} new rides synced (${s.total_rides} total)`;
         this.syncing = false;
         this.renderedRideId = null;
+        this.pending.refresh();
         this.ngOnInit();
       },
       error: () => { this.syncing = false; }
@@ -311,7 +312,7 @@ export class RateRidesComponent implements OnInit, AfterViewChecked {
     this.submitting = true;
     this.selectedRating = r;
     const ride = this.currentRide;
-    if (!ride) return;
+    if (!ride) { this.submitting = false; return; }
 
     this.api.rateRide(ride.id, r).subscribe({
       next: stats => {
@@ -333,6 +334,11 @@ export class RateRidesComponent implements OnInit, AfterViewChecked {
 
   toggleView(): void {
     this.viewMode = this.viewMode === 'pending' ? 'rated' : 'pending';
+    if (this.viewMode === 'pending') {
+      this.map?.remove();
+      this.map = null;
+      this.renderedRideId = null;
+    }
   }
 
   private advance(): void {

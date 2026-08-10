@@ -13,6 +13,7 @@ import * as L from 'leaflet';
 
 import { AuthService } from '../../core/services/auth.service';
 import { RouteApiService, CoverageResponse, RouteResult, CoverageActivity } from '../../core/services/route-api.service';
+import { PendingRatingsService } from '../../core/services/pending-ratings.service';
 import { decodePolyline } from '../../shared/utils/polyline';
 
 // Leaflet's default marker icons break under bundlers — point them at the CDN.
@@ -186,7 +187,7 @@ export class CoverageComponent implements AfterViewInit, OnDestroy {
   private pollTimer?: ReturnType<typeof setTimeout>;
   private radiusDebounce?: ReturnType<typeof setTimeout>;
 
-  constructor(public auth: AuthService, private api: RouteApiService) {}
+  constructor(public auth: AuthService, private api: RouteApiService, private pending: PendingRatingsService) {}
 
   ngAfterViewInit(): void {
     const user = this.auth.currentUser();
@@ -377,7 +378,7 @@ export class CoverageComponent implements AfterViewInit, OnDestroy {
     this.error.set(null);
     this.routeLayer.clearLayers();
     this.api.generateCoverageRoute(this.radiusMi(), this.activity(), this.routeDistanceMi()).subscribe({
-      next: routes => { this.generating.set(false); this.routes.set(routes); this.renderRoutes(routes); },
+      next: routes => { this.generating.set(false); this.routes.set(routes); this.renderRoutes(routes); this.pending.refresh(); },
       error: err => {
         this.generating.set(false);
         this.error.set(err?.error?.detail ?? 'Could not generate a route.');

@@ -84,7 +84,13 @@ import { PendingRatingsService } from '../../../core/services/pending-ratings.se
           <button class="next-btn" (click)="nextAfterSubmit()" id="next-route-btn">Next Route &rarr;</button>
         </div>
 
-        <div class="done-state" *ngIf="done && !submitted">
+        <div class="done-state" *ngIf="!loading && allRoutes.length === 0">
+          <h2>No generated routes yet</h2>
+          <p>Generate a route from the Route Builder, then come back here after riding it.</p>
+          <a routerLink="/app" class="back-btn">Back to Route Builder</a>
+        </div>
+
+        <div class="done-state" *ngIf="done && !submitted && allRoutes.length > 0">
           <h2>All routes reviewed</h2>
           <a routerLink="/app" class="back-btn">Back to Route Builder</a>
         </div>
@@ -172,6 +178,7 @@ import { PendingRatingsService } from '../../../core/services/pending-ratings.se
       display: flex; flex-direction: column; align-items: center; gap: 1rem;
     }
     .done-state h2 { margin: 0; color: var(--text-primary); }
+    .done-state p { color: var(--text-muted); margin: 0; }
     .back-btn { padding: 0.625rem 1.5rem; background: var(--accent); color: var(--on-accent); border-radius: 4px; text-decoration: none; font-weight: 600; display: inline-block; box-shadow: 3px 3px 0 rgba(60, 46, 30, 0.25); transition: all 0.15s; }
     .back-btn:hover { background: var(--accent-hover); transform: translate(-1px, -1px); box-shadow: 4px 4px 0 rgba(60, 46, 30, 0.3); }
     .spinner { width: 32px; height: 32px; border: 3px solid rgba(168, 71, 31, 0.2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
@@ -201,6 +208,7 @@ export class RateGeneratedComponent implements OnInit {
   loading = true;
   done = false;
   submitted = false;
+  submitting = false;
   lastRating: number | null = null;
   lastPredicted = 0;
   viewMode: 'pending' | 'rated' = 'pending';
@@ -227,8 +235,10 @@ export class RateGeneratedComponent implements OnInit {
   }
 
   rate(r: number): void {
+    if (this.submitting) return;
+    this.submitting = true;
     const route = this.current;
-    if (!route) return;
+    if (!route) { this.submitting = false; return; }
     this.lastPredicted = route.predicted_score;
     this.lastRating = r;
     this.api.rateGeneratedRoute(route.id, r).subscribe({
@@ -237,7 +247,9 @@ export class RateGeneratedComponent implements OnInit {
         this.submitted = true;
         this.pending.decrement();
         this.ratedRoutes = [{ ...route, user_rating: r }, ...this.ratedRoutes];
-      }
+        this.submitting = false;
+      },
+      error: () => { this.submitting = false; }
     });
   }
 
