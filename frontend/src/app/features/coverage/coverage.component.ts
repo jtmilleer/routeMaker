@@ -9,7 +9,6 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
 import * as L from 'leaflet';
 
 import { AuthService } from '../../core/services/auth.service';
@@ -32,17 +31,9 @@ const DEFAULT_CENTER: [number, number] = [41.6543, -91.5267];  // Iowa City
 @Component({
   selector: 'app-coverage',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule],
   template: `
     <div class="shell">
-      <nav class="topnav">
-        <span class="brand">RouteMaker</span>
-        <div class="nav-links">
-          <a routerLink="/app" class="nav-link">← Builder</a>
-          <button class="logout-btn" (click)="auth.logout()">Sign Out</button>
-        </div>
-      </nav>
-
       <div class="body">
         <aside class="sidebar">
           <h1>Street Coverage</h1>
@@ -125,14 +116,8 @@ const DEFAULT_CENTER: [number, number] = [41.6543, -91.5267];  // Iowa City
     </div>
   `,
   styles: [`
-    :host { display: block; height: 100vh; overflow: hidden; }
-    .shell { display: flex; flex-direction: column; height: 100vh; background: var(--bg-primary); color: var(--text-primary); font-family: var(--font-primary); }
-    .topnav { display: flex; align-items: center; justify-content: space-between; padding: 0 1.5rem; height: 56px; min-height: 56px; background: rgba(224,213,184,0.95); border-bottom: 1px solid var(--border); }
-    .brand { font-family: var(--font-display); font-size: 1.25rem; font-weight: 700; }
-    .nav-links { display: flex; align-items: center; gap: 1rem; }
-    .nav-link { color: var(--text-muted); text-decoration: none; font-size: 0.875rem; }
-    .nav-link:hover { color: var(--text-primary); }
-    .logout-btn { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text-muted); padding: 0.375rem 0.75rem; font-size: 0.8rem; cursor: pointer; }
+    :host { display: flex; flex: 1; min-height: 0; overflow: hidden; }
+    .shell { display: flex; flex-direction: column; height: 100%; width: 100%; background: var(--bg-primary); color: var(--text-primary); font-family: var(--font-primary); }
     .body { display: flex; flex: 1; overflow: hidden; }
     .sidebar { width: 320px; min-width: 320px; padding: 1.25rem; border-right: 1px solid var(--border); overflow-y: auto; }
     h1 { font-family: var(--font-display); font-size: 1.2rem; margin: 0 0 1rem; }
