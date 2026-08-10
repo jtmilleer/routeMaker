@@ -33,7 +33,7 @@ export const routes: Routes = [
     path: 'app/rate-generated',
     canActivate: [authGuard],
     loadComponent: () =>
-      import('./features/rate-generated/rate-generated.component').then(m => m.RateGeneratedComponent),
+      import('./features/rate/rate-generated/rate-generated.component').then(m => m.RateGeneratedComponent),
   },
   // Protected: street coverage map
   {
