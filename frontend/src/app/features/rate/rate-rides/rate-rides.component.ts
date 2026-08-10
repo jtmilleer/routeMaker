@@ -1,8 +1,14 @@
+// LAYER: Component — Rate Rides (queue + rated history)
+// PURPOSE: Rate un-rated Strava rides one at a time. A "View rated" toggle
+//          switches to a read-only list of rides already rated. Nav/back-link
+//          now lives in AppShellComponent + RateShellComponent's sub-nav.
+
 import { Component, OnInit, AfterViewChecked, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import * as L from 'leaflet';
-import { RouteApiService, Ride, RatingStats } from '../../core/services/route-api.service';
+import { RouteApiService, Ride, RatingStats } from '../../../core/services/route-api.service';
+import { PendingRatingsService } from '../../../core/services/pending-ratings.service';
 
 function decodePolyline(encoded: string): [number, number][] {
   const points: [number, number][] = [];
@@ -25,10 +31,11 @@ function decodePolyline(encoded: string): [number, number][] {
   imports: [CommonModule, RouterLink],
   template: `
     <div class="page">
-      <nav class="page-nav">
-        <a routerLink="/app" class="back-link" id="back-to-app">&larr; Back to Route Builder</a>
-        <h1 class="page-title">Rate Your Rides</h1>
-      </nav>
+      <div class="toolbar">
+        <button class="toggle-view-btn" (click)="toggleView()" id="toggle-rated-view">
+          {{ viewMode === 'pending' ? 'View rated (' + ratedRides.length + ')' : '← Back to rating' }}
+        </button>
+      </div>
 
       <div class="model-bar" *ngIf="stats">
         <span>Preference model v{{ stats.model_version }}</span>
@@ -41,14 +48,15 @@ function decodePolyline(encoded: string): [number, number][] {
         </span>
       </div>
 
-      <div class="sync-row">
-        <button class="sync-btn" (click)="syncRides()" [disabled]="syncing" id="sync-rides-btn">
-          {{ syncing ? 'Syncing...' : 'Sync from Strava' }}
-        </button>
-        <span class="hint" *ngIf="syncMsg">{{ syncMsg }}</span>
-      </div>
+      <ng-container *ngIf="viewMode === 'pending'">
+        <div class="sync-row">
+          <button class="sync-btn" (click)="syncRides()" [disabled]="syncing" id="sync-rides-btn">
+            {{ syncing ? 'Syncing...' : 'Sync from Strava' }}
+          </button>
+          <span class="hint" *ngIf="syncMsg">{{ syncMsg }}</span>
+        </div>
 
-      <div class="ride-card" *ngIf="currentRide && !done">
+        <div class="ride-card" *ngIf="currentRide && !done">
         <div class="ride-header">
           <h2 class="ride-name">{{ currentRide.name }}</h2>
           <span class="ride-count">{{ currentIndex + 1 }} / {{ rides.length }}</span>
@@ -89,36 +97,46 @@ function decodePolyline(encoded: string): [number, number][] {
         </div>
       </div>
 
-      <div class="done-state" *ngIf="!loading && rides.length === 0 && !done">
-        <h2>No rides yet</h2>
-        <p>Hit "Sync from Strava" to import your ride history.</p>
-      </div>
+        <div class="done-state" *ngIf="!loading && rides.length === 0 && !done">
+          <h2>No rides yet</h2>
+          <p>Hit "Sync from Strava" to import your ride history.</p>
+        </div>
 
-      <div class="done-state" *ngIf="done && rides.length === 0 && totalRides > 0">
-        <h2>All rides rated!</h2>
-        <p>Your routes will personalize as you add more data.</p>
-        <a routerLink="/app" class="back-btn">Back to Route Builder</a>
-      </div>
+        <div class="done-state" *ngIf="done && rides.length === 0 && totalRides > 0">
+          <h2>All rides rated!</h2>
+          <p>Your routes will personalize as you add more data.</p>
+          <a routerLink="/app" class="back-btn">Back to Route Builder</a>
+        </div>
 
-      <div class="done-state" *ngIf="done && rides.length > 0">
-        <h2>All done!</h2>
-        <p>Your routes will personalize as you add more data.</p>
-        <a routerLink="/app" class="back-btn">Back to Route Builder</a>
-      </div>
+        <div class="done-state" *ngIf="done && rides.length > 0">
+          <h2>All done!</h2>
+          <p>Your routes will personalize as you add more data.</p>
+          <a routerLink="/app" class="back-btn">Back to Route Builder</a>
+        </div>
 
-      <div class="loading-state" *ngIf="loading">
-        <div class="spinner"></div>
-        <span>Loading rides...</span>
+        <div class="loading-state" *ngIf="loading">
+          <div class="spinner"></div>
+          <span>Loading rides...</span>
+        </div>
+      </ng-container>
+
+      <div class="rated-list" *ngIf="viewMode === 'rated'">
+        <div class="rated-empty" *ngIf="ratedRides.length === 0">No rated rides yet.</div>
+        <div class="rated-row" *ngFor="let r of ratedRides">
+          <span class="rated-name">{{ r.name }}</span>
+          <span class="rated-date">{{ r.date | date:'mediumDate' }}</span>
+          <span class="rated-score">{{ r.user_rating }}/10</span>
+        </div>
       </div>
     </div>
   `,
   styles: [`
-    .page { min-height: 100vh; background: var(--bg-primary); color: var(--text-primary); padding: 2rem; font-family: var(--font-primary); }
-    .page-title, .ride-name, .done-state h2 { font-family: var(--font-display); }
-    .page-nav { display: flex; align-items: center; gap: 1.5rem; margin-bottom: 1.5rem; }
-    .back-link { color: var(--text-dim); text-decoration: none; font-size: 0.875rem; }
-    .back-link:hover { color: var(--text-primary); }
-    .page-title { margin: 0; font-size: 1.5rem; font-weight: 800; color: var(--text-primary); }
+    .page { min-height: 100%; background: var(--bg-primary); color: var(--text-primary); padding: 2rem; font-family: var(--font-primary); }
+    .ride-name, .done-state h2 { font-family: var(--font-display); }
+
+    .toolbar { display: flex; justify-content: flex-end; margin-bottom: 1rem; }
+    .toggle-view-btn { background: none; border: 1px solid var(--border); border-radius: 6px; color: var(--text-muted); padding: 0.35rem 0.75rem; font-size: 0.8rem; font-family: var(--font-primary); cursor: pointer; }
+    .toggle-view-btn:hover { color: var(--text-primary); border-color: var(--surface-active-border); }
 
     .model-bar {
       display: flex; gap: 1.5rem; align-items: center;
@@ -181,12 +199,25 @@ function decodePolyline(encoded: string): [number, number][] {
     .back-btn:hover { background: var(--accent-hover); transform: translate(-1px, -1px); box-shadow: 4px 4px 0 rgba(60, 46, 30, 0.3); }
     .spinner { width: 32px; height: 32px; border: 3px solid rgba(168, 71, 31, 0.2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    .rated-list { max-width: 580px; margin: 0 auto; display: flex; flex-direction: column; gap: 0.5rem; }
+    .rated-empty { color: var(--text-muted); text-align: center; padding: 2rem; }
+    .rated-row {
+      display: flex; justify-content: space-between; align-items: center;
+      background: var(--bg-surface); border: 1px solid var(--border); border-radius: 10px;
+      padding: 0.75rem 1rem; font-size: 0.85rem;
+    }
+    .rated-name { color: var(--text-primary); font-weight: 600; }
+    .rated-date { color: var(--text-dim); }
+    .rated-score { color: var(--accent); font-weight: 700; }
   `]
 })
 export class RateRidesComponent implements OnInit, AfterViewChecked {
   @ViewChild('rideMap') mapEl!: ElementRef;
 
+  allRides: Ride[] = [];
   rides: Ride[] = [];
+  ratedRides: Ride[] = [];
   totalRides = 0;
   currentIndex = 0;
   selectedRating: number | null = null;
@@ -195,6 +226,7 @@ export class RateRidesComponent implements OnInit, AfterViewChecked {
   syncing = false;
   syncMsg = '';
   done = false;
+  viewMode: 'pending' | 'rated' = 'pending';
   ratingValues = [1,2,3,4,5,6,7,8,9,10];
 
   private map: L.Map | null = null;
@@ -205,17 +237,20 @@ export class RateRidesComponent implements OnInit, AfterViewChecked {
     return this.rides[this.currentIndex] ?? null;
   }
 
-  constructor(private api: RouteApiService) {}
+  constructor(private api: RouteApiService, private pending: PendingRatingsService) {}
 
   ngOnInit(): void {
     this.loading = true;
     this.done = false;
     this.currentIndex = 0;
+    this.viewMode = 'pending';
     this.api.getRatingStats().subscribe(s => this.stats = s);
     this.api.getRides().subscribe({
       next: rides => {
+        this.allRides = rides;
         this.totalRides = rides.length;
         this.rides = rides.filter(r => r.user_rating == null);
+        this.ratedRides = rides.filter(r => r.user_rating != null);
         this.loading = false;
         if (this.rides.length === 0 && this.totalRides > 0) {
           this.done = true;
@@ -281,6 +316,8 @@ export class RateRidesComponent implements OnInit, AfterViewChecked {
     this.api.rateRide(ride.id, r).subscribe({
       next: stats => {
         this.stats = stats;
+        this.pending.decrement();
+        this.ratedRides = [{ ...ride, user_rating: r }, ...this.ratedRides];
         setTimeout(() => {
           this.advance();
           this.submitting = false;
@@ -292,6 +329,10 @@ export class RateRidesComponent implements OnInit, AfterViewChecked {
 
   skip(): void {
     this.advance();
+  }
+
+  toggleView(): void {
+    this.viewMode = this.viewMode === 'pending' ? 'rated' : 'pending';
   }
 
   private advance(): void {

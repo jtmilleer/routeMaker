@@ -26,7 +26,7 @@ export const routes: Routes = [
     path: 'app/rate-rides',
     canActivate: [authGuard],
     loadComponent: () =>
-      import('./features/rate-rides/rate-rides.component').then(m => m.RateRidesComponent),
+      import('./features/rate/rate-rides/rate-rides.component').then(m => m.RateRidesComponent),
   },
   // Protected: rate generated routes after riding them
   {
