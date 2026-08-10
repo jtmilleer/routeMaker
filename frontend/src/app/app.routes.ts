@@ -14,33 +14,45 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/landing/landing.component').then(m => m.LandingComponent),
   },
-  // Protected: main route builder
+  // Protected: app shell (persistent nav) + its three sections
   {
     path: 'app',
     canActivate: [authGuard],
     loadComponent: () =>
-      import('./features/route-builder/route-builder.component').then(m => m.RouteBuilderComponent),
-  },
-  // Protected: rate your Strava rides
-  {
-    path: 'app/rate-rides',
-    canActivate: [authGuard],
-    loadComponent: () =>
-      import('./features/rate/rate-rides/rate-rides.component').then(m => m.RateRidesComponent),
-  },
-  // Protected: rate generated routes after riding them
-  {
-    path: 'app/rate-generated',
-    canActivate: [authGuard],
-    loadComponent: () =>
-      import('./features/rate/rate-generated/rate-generated.component').then(m => m.RateGeneratedComponent),
-  },
-  // Protected: street coverage map
-  {
-    path: 'app/coverage',
-    canActivate: [authGuard],
-    loadComponent: () =>
-      import('./features/coverage/coverage.component').then(m => m.CoverageComponent),
+      import('./shared/components/app-shell/app-shell.component').then(m => m.AppShellComponent),
+    children: [
+      // Main route builder (default landing page under /app)
+      {
+        path: '',
+        loadComponent: () =>
+          import('./features/route-builder/route-builder.component').then(m => m.RouteBuilderComponent),
+      },
+      // Rate section: sub-nav shell + Rides / Generated Routes children
+      {
+        path: 'rate',
+        loadComponent: () =>
+          import('./features/rate/rate-shell.component').then(m => m.RateShellComponent),
+        children: [
+          { path: '', redirectTo: 'rides', pathMatch: 'full' },
+          {
+            path: 'rides',
+            loadComponent: () =>
+              import('./features/rate/rate-rides/rate-rides.component').then(m => m.RateRidesComponent),
+          },
+          {
+            path: 'generated',
+            loadComponent: () =>
+              import('./features/rate/rate-generated/rate-generated.component').then(m => m.RateGeneratedComponent),
+          },
+        ],
+      },
+      // Street coverage map
+      {
+        path: 'coverage',
+        loadComponent: () =>
+          import('./features/coverage/coverage.component').then(m => m.CoverageComponent),
+      },
+    ],
   },
   // Fallback
   { path: '**', redirectTo: '' },
