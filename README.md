@@ -48,15 +48,33 @@ STRAVA_CLIENT_SECRET=your_client_secret
 JWT_SECRET=any_long_random_string
 ```
 
-Install dependencies:
+Install backend dependencies (Python must be 3.12 or 3.13 -- not 3.14):
 
-```
+**Windows (PowerShell)**
+
+```powershell
 cd backend
-py -3.13 -m venv .venv       # must be 3.12 or 3.13 -- not 3.14
-.venv\Scripts\Activate.ps1   # or source .venv/bin/activate on mac/linux
+py -3.13 -m venv .venv
+.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 cd ..
+```
 
+**Linux / macOS**
+
+```bash
+cd backend
+python3.13 -m venv .venv     # or python3.12
+source .venv/bin/activate
+pip install -r requirements.txt
+cd ..
+```
+
+On Debian/Ubuntu, if `venv` fails with `No module named 'ensurepip'`, install the venv package first: `sudo apt install python3.12-venv` (or `python3.13-venv`).
+
+Install frontend dependencies:
+
+```
 cd frontend
 npm install
 cd ..
@@ -68,7 +86,8 @@ In two terminals from the project root:
 
 ```
 # Terminal 1 - backend
-.\backend\.venv\Scripts\Activate.ps1   # or source backend/.venv/bin/activate
+.\backend\.venv\Scripts\Activate.ps1   # Windows
+source backend/.venv/bin/activate      # Linux / macOS
 python -m backend
 
 # Terminal 2 - frontend
