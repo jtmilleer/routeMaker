@@ -119,7 +119,7 @@ src/                   # original CLI scripts (generate_routes.py, train_model.p
 
 ## Notes
 
-- Per-user models live in `backend/data/models/`. New users start with a copy of the global baseline model.
-- Road network graphs are in `backend/data/graphs/` (~100MB+ per city as graphml). They're shared across users.
+- Per-user models live in `data/models/`. New users start with a copy of the global baseline model.
+- Road network graphs are in `data/graphs/` (~100MB+ per city as graphml). They're shared across users.
 - Switch to Postgres by changing `DATABASE_URL` in `.env` to `postgresql+asyncpg://...` -- no code changes needed.
 - The `src/` directory has the original standalone Python scripts that this project grew out of.

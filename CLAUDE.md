@@ -87,13 +87,12 @@ it states the file's contract more precisely than inferring from code.
 
 - `DATABASE_URL` default (`sqlite+aiosqlite:///./routemaker.db`) is relative to the
   process's cwd. Since the backend is launched with `python -m backend` **from the repo
-  root**, the live DB is `<repo-root>/routemaker.db`. `backend/routemaker.db` (if present)
-  is a stale leftover from running uvicorn out of `backend/` at some point — not the
-  active database. Confirm which file you're looking at before assuming DB state.
+  root**, the live DB is `<repo-root>/routemaker.db`. Running the server from inside
+  `backend/` would silently create a fresh empty DB (and `data/` dir) there instead.
 - Switching to Postgres is a one-line `DATABASE_URL` change in `.env`
   (`postgresql+asyncpg://...`) — no code changes needed elsewhere.
-- Per-user models: `backend/data/models/<athlete_id>.pkl`. Road graphs:
-  `backend/data/graphs/<city_key>.graphml`. Both are gitignored data, not source.
+- Per-user models: `data/models/<athlete_id>.pkl` (repo root, via `DATA_DIR=./data`). Road graphs:
+  `data/graphs/<city_key>.graphml`. Both are gitignored data, not source.
 
 ### Frontend (`frontend/src/app/`)
 

@@ -53,7 +53,7 @@ def get_model(athlete_id: int) -> dict:
         if not os.path.exists(settings.global_baseline_path):
             raise FileNotFoundError(
                 f"Global baseline model not found at {settings.global_baseline_path}. "
-                "Copy data/route_model.pkl to backend/data/models/global_baseline.pkl"
+                "Copy data/route_model.pkl to data/models/global_baseline.pkl"
             )
         shutil.copy2(settings.global_baseline_path, user_path)
 
