@@ -136,10 +136,9 @@ def _parse_key(key: str) -> Optional[tuple[float, float]]:
 
 
 def _available_keys() -> set[str]:
-    """All city_keys we could load: in-memory, preset, or on disk."""
+    """All city_keys we could load: in-memory or on disk. Presets count only once
+    built, so a missing preset graph isn't mistaken for one that covers itself."""
     keys = set(_graph_cache.keys())
-    for la, ln in PRESET_CITIES.values():
-        keys.add(city_key(la, ln))
     if os.path.isdir(settings.graphs_dir):
         for f in os.listdir(settings.graphs_dir):
             if f.endswith(".graphml"):
