@@ -143,7 +143,8 @@ export class MapViewComponent implements AfterViewInit, OnDestroy {
     routes.forEach((route, i) => {
       const color = ROUTE_COLORS[i % ROUTE_COLORS.length];
       const layers: L.Polyline[] = [];
-      const tooltip = `#${i + 1} | ${route.predicted_score}/10 | ${route.distance_mi}mi | ${route.elevation_ft}ft`;
+      const score = route.predicted_score != null ? ` | ${route.predicted_score}/10` : '';
+      const tooltip = `#${i + 1}${score} | ${route.distance_mi}mi | ${route.elevation_ft}ft`;
 
       if (route.route_segments) {
         try {

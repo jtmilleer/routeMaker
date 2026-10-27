@@ -277,6 +277,7 @@ def generate_coverage_route(G: nx.MultiDiGraph, athlete_id: int,
     start = ox.distance.nearest_nodes(H_marked, lng, lat)
     target_m = distance_mi * METERS_PER_MILE
 
+    scored = model_service.has_model(athlete_id)
     candidates = []
     seen_polylines = set()
     for seed in range(6):  # a few attempts to collect up to 3 distinct loops
@@ -304,11 +305,13 @@ def generate_coverage_route(G: nx.MultiDiGraph, athlete_id: int,
         elevation_profile = route_service._build_elevation_profile(H_marked, path)
         route_id = str(uuid.uuid4())
         gpx_path = route_service._save_gpx(H_marked, path, route_id)
+        # Loops are ranked by new-street coverage; the model score is display-only,
+        # so users without a model yet still get loops, just unscored.
         score = model_service.predict_score(athlete_id, {
             "distance_mi": dist_mi, "elevation_ft": elev_ft,
             "avg_speed_mph": 15, "moving_time_min": dist_mi / 15 * 60,
             "suffer_score": 0, "avg_watts": 0, "pr_count": 0,
-        })
+        }) if scored else None
 
         candidates.append(RouteResult(
             id=route_id,

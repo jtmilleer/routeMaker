@@ -51,6 +51,7 @@ async def _get_stats(athlete_id: int, db: AsyncSession) -> RatingStats:
     return RatingStats(
         total_ratings=user.total_ratings,
         model_version=user.model_version,
+        has_model=model_service.has_model(athlete_id),
         ratings_until_next_retrain=until_retrain if until_retrain != RETRAIN_THRESHOLD else 0,
         model_trained_at=user.model_trained_at,
     )

@@ -16,7 +16,7 @@ const RANK_COLORS = ['#a8471f', '#5f7a52', '#b8862c', '#5c6b73', '#8a4a5c'];
     <div class="card" [class.selected]="selected" [style.border-left-color]="rankColor">
       <div class="card-header">
         <span class="rank" [style.color]="rankColor">#{{ rank }}</span>
-        <span class="score">{{ route.predicted_score }}<span class="score-max">/10</span></span>
+        <span class="score" *ngIf="route.predicted_score != null">{{ route.predicted_score }}<span class="score-max">/10</span></span>
       </div>
       <div class="stats">
         <div class="stat">

@@ -48,13 +48,6 @@ async def lifespan(app: FastAPI):
         logger.info("Migrating existing Iowa City graph to new location...")
         shutil.copy2(old_graph, new_graph)
 
-    # Migrate existing global baseline model
-    old_model = os.path.join(os.path.dirname(__file__), "..", "data", "route_model.pkl")
-    if os.path.exists(old_model) and not os.path.exists(settings.global_baseline_path):
-        import shutil
-        logger.info("Migrating existing route_model.pkl to global baseline...")
-        shutil.copy2(old_model, settings.global_baseline_path)
-
     await create_tables()
     logger.info("Database tables ready")
 

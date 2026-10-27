@@ -33,7 +33,7 @@ export interface RouteResult {
   route_segments?: string;   // JSON string, only for novel routes
   distance_mi: number;
   elevation_ft: number;
-  predicted_score: number;
+  predicted_score: number | null;  // null for coverage loops before the user has a model
   novelty_pct?: number;
   historic_sites?: HistoricSite[];
   elevation_profile?: number[][];   // [distance_mi, elevation_ft] points
@@ -62,6 +62,7 @@ export interface SyncSummary {
 export interface RatingStats {
   total_ratings: number;
   model_version: number;
+  has_model: boolean;  // false until the first retrain; route generation is locked until then
   ratings_until_next_retrain: number;
   model_trained_at: string | null;
 }

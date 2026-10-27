@@ -4,8 +4,6 @@
 #          we issue a JWT and redirect Angular to /auth/callback with the token.
 
 import logging
-import os
-import shutil
 import time
 from datetime import datetime, timezone
 
@@ -18,7 +16,6 @@ from backend.core.db import get_db
 from backend.core.security import create_access_token, get_current_user
 from backend.models.db_models import StravaToken, User
 from backend.services import strava_service
-from backend.services.model_service import user_model_path
 
 logger = logging.getLogger("routemaker.auth")
 
@@ -109,12 +106,6 @@ async def strava_callback(
     token_row.expires_at = token_data["expires_at"]
 
     await db.flush()
-
-    # Seed user's personal model from global baseline on first login
-    model_path = user_model_path(athlete_id)
-    if not os.path.exists(model_path):
-        if os.path.exists(settings.global_baseline_path):
-            shutil.copy2(settings.global_baseline_path, model_path)
 
     # Issue JWT and redirect to Angular
     jwt = create_access_token(athlete_id)

@@ -40,6 +40,15 @@ async def generate(
     """
     import asyncio
 
+    # Routes are ranked by the user's model, so generation is locked until they
+    # have rated enough rides to train one.
+    if not model_service.has_model(athlete_id):
+        raise HTTPException(
+            status_code=409,
+            detail="Rate some of your rides first: route generation unlocks once "
+                   "your personal model has been trained.",
+        )
+
     # Check graph availability
     city_k = graph_service.city_key(params.start_lat, params.start_lng)
     status = graph_service.get_graph_status(city_k)
@@ -158,7 +167,7 @@ async def get_history(
             route_segments=r.route_segments,
             distance_mi=r.distance_mi or 0,
             elevation_ft=r.elevation_ft or 0,
-            predicted_score=r.predicted_score or 0,
+            predicted_score=r.predicted_score,
             novelty_pct=r.novelty_pct,
             city_key=r.city_key or "",
             route_type=r.route_type,

@@ -36,7 +36,7 @@ import { PendingRatingsService } from '../../../core/services/pending-ratings.se
           <div class="card-header">
             <div>
               <h2 class="route-label">{{ current.route_type | titlecase }} Route</h2>
-              <span class="predicted">Predicted score: <strong>{{ current.predicted_score }}/10</strong></span>
+              <span class="predicted" *ngIf="current.predicted_score != null">Predicted score: <strong>{{ current.predicted_score }}/10</strong></span>
             </div>
             <span class="route-count">{{ currentIndex + 1 }} / {{ routes.length }}</span>
           </div>
@@ -70,11 +70,13 @@ import { PendingRatingsService } from '../../../core/services/pending-ratings.se
         <div class="comparison-card" *ngIf="submitted && lastRating != null">
           <h3>Rating Saved</h3>
           <div class="compare-row">
-            <div class="compare-item">
-              <span class="compare-val">{{ lastPredicted }}</span>
-              <span class="compare-label">Predicted</span>
-            </div>
-            <div class="compare-arrow">&rarr;</div>
+            <ng-container *ngIf="lastPredicted != null">
+              <div class="compare-item">
+                <span class="compare-val">{{ lastPredicted }}</span>
+                <span class="compare-label">Predicted</span>
+              </div>
+              <div class="compare-arrow">&rarr;</div>
+            </ng-container>
             <div class="compare-item">
               <span class="compare-val actual">{{ lastRating }}</span>
               <span class="compare-label">Your Rating</span>
@@ -106,8 +108,10 @@ import { PendingRatingsService } from '../../../core/services/pending-ratings.se
         <div class="rated-row" *ngFor="let r of ratedRoutes">
           <span class="rated-type">{{ r.route_type | titlecase }} · {{ r.distance_mi | number:'1.1-1' }} mi</span>
           <span class="rated-compare">
-            <span class="rated-predicted">{{ r.predicted_score }}</span>
-            <span class="rated-arrow">&rarr;</span>
+            <ng-container *ngIf="r.predicted_score != null">
+              <span class="rated-predicted">{{ r.predicted_score }}</span>
+              <span class="rated-arrow">&rarr;</span>
+            </ng-container>
             <span class="rated-actual">{{ r.user_rating }}</span>
           </span>
         </div>
@@ -210,12 +214,15 @@ export class RateGeneratedComponent implements OnInit {
   submitted = false;
   submitting = false;
   lastRating: number | null = null;
-  lastPredicted = 0;
+  lastPredicted: number | null = null;
   viewMode: 'pending' | 'rated' = 'pending';
   ratings = [1,2,3,4,5,6,7,8,9,10];
 
   get current(): RouteResult | null { return this.routes[this.currentIndex] ?? null; }
-  get diff(): number { return Math.abs((this.lastRating ?? 0) - this.lastPredicted); }
+  get diff(): number {
+    if (this.lastPredicted == null) return 0;
+    return Math.abs((this.lastRating ?? 0) - this.lastPredicted);
+  }
 
   constructor(private api: RouteApiService, private pending: PendingRatingsService) {}
 

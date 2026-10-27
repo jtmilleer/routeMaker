@@ -1,14 +1,14 @@
 # LAYER: Service — Per-User ML Model
 # PURPOSE: Manages loading, caching, and retraining of per-user
 #          GradientBoostingRegressor models. Each user has their own .pkl file.
-#          New users start with a copy of the global baseline. Retraining is
+#          New users have no model until their first RETRAIN_THRESHOLD ratings
+#          train one; route generation is locked until then. Retraining is
 #          triggered automatically after every RETRAIN_THRESHOLD new ratings.
 #          The model architecture (GradientBoostingRegressor + StandardScaler)
 #          is unchanged from the original train_model.py.
 
 import os
 import pickle
-import shutil
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -34,30 +34,23 @@ def user_model_path(athlete_id: int) -> str:
     return os.path.join(settings.models_dir, f"{athlete_id}.pkl")
 
 
+def has_model(athlete_id: int) -> bool:
+    """True once the user's first retrain has produced a personal model."""
+    return athlete_id in _model_cache or os.path.exists(user_model_path(athlete_id))
+
+
 def get_model(athlete_id: int) -> dict:
     """
-    Return the model bundle for this athlete. Load order:
-      1. In-memory cache (fastest)
-      2. User's .pkl on disk
-      3. Global baseline (copied to user's path for future loads)
+    Return the model bundle for this athlete, from the in-memory cache or the
+    user's .pkl on disk. Raises FileNotFoundError if the user has no model yet
+    (callers should check has_model() first).
 
     Returns a dict with keys: model, scaler, feature_names
     """
     if athlete_id in _model_cache:
         return _model_cache[athlete_id]
 
-    user_path = user_model_path(athlete_id)
-
-    if not os.path.exists(user_path):
-        # First time this user generates a route — seed from global baseline
-        if not os.path.exists(settings.global_baseline_path):
-            raise FileNotFoundError(
-                f"Global baseline model not found at {settings.global_baseline_path}. "
-                "Copy data/route_model.pkl to data/models/global_baseline.pkl"
-            )
-        shutil.copy2(settings.global_baseline_path, user_path)
-
-    with open(user_path, "rb") as f:
+    with open(user_model_path(athlete_id), "rb") as f:
         bundle = pickle.load(f)
 
     _model_cache[athlete_id] = bundle

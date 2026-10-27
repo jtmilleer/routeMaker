@@ -46,10 +46,6 @@ class Settings(BaseSettings):
         return f"{self.data_dir}/models"
 
     @property
-    def global_baseline_path(self) -> str:
-        return f"{self.models_dir}/global_baseline.pkl"
-
-    @property
     def allowed_ids_list(self) -> list[int]:
         """Returns parsed list of allowed athlete IDs, or empty list (= allow all)."""
         if not self.allowed_athlete_ids.strip():

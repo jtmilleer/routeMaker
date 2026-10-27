@@ -95,7 +95,7 @@ class RouteResult(BaseModel):
     route_segments: Optional[str] = None  # JSON string; only for novel routes
     distance_mi: float
     elevation_ft: float
-    predicted_score: float
+    predicted_score: Optional[float] = None  # None for coverage loops before the user has a model
     novelty_pct: Optional[float] = None  # only for novel routes
     historic_sites: Optional[list[HistoricSite]] = None
     # Downsampled [distance_mi, elevation_ft] points for the elevation chart.
@@ -128,6 +128,7 @@ class RatingStats(BaseModel):
     """
     total_ratings: int
     model_version: int
+    has_model: bool  # False until the first retrain; route generation is locked until then
     ratings_until_next_retrain: int
     model_trained_at: Optional[datetime] = None
 
