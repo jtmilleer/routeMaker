@@ -55,5 +55,6 @@ data/gpx/
 .DS_Store
 Thumbs.db
 *.log
+.vscode/
 
 .superpowers/
