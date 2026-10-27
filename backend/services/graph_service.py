@@ -237,19 +237,29 @@ def _ensure_srtm_tiles(coords: list[tuple[float, float]], cache_dir: str):
             logger.warning("Failed to download %s: %s", filename, e)
 
 
+def _set_progress(key: str, pct: int):
+    """Update a build's progress_pct, logging each time it reaches another 5%."""
+    prev = _build_status[key]["progress_pct"]
+    _build_status[key]["progress_pct"] = pct
+    if pct // 5 > prev // 5:
+        logger.info("Building %s: %d%%", key, pct)
+
+
 def _build_graph_blocking(lat: float, lng: float, key: str):
     """
     Download, process, and save a road network graph. Blocking — runs in a thread.
     Updates _build_status at each step so the frontend polling can show progress.
     """
     try:
-        _build_status[key] = {"status": "building", "progress_pct": 5,
+        _build_status[key] = {"status": "building", "progress_pct": 0,
                                "node_count": None, "edge_count": None}
+        _set_progress(key, 5)
 
         # Step 1: Download from OpenStreetMap
+        logger.info("Downloading OSM network for %s (%dkm radius)...", key, NETWORK_DIST // 1000)
         G = ox.graph_from_point((lat, lng), dist=NETWORK_DIST,
                                  network_type="bike", simplify=True)
-        _build_status[key]["progress_pct"] = 20
+        _set_progress(key, 20)
 
         # Step 2: Remove highways unsuitable for cycling
         edges_to_remove = [
@@ -258,9 +268,9 @@ def _build_graph_blocking(lat: float, lng: float, key: str):
                                     "motorway_link", "trunk_link")
         ]
         G.remove_edges_from(edges_to_remove)
-        _build_status[key]["progress_pct"] = 30
+        _set_progress(key, 30)
 
-        _build_status[key]["progress_pct"] = 40
+        _set_progress(key, 40)
 
         # Step 4: Elevation via local SRTM tiles
         srtm_cache = os.path.join(settings.data_dir, "srtm_cache")
@@ -275,18 +285,18 @@ def _build_graph_blocking(lat: float, lng: float, key: str):
             G.nodes[node_id]["elevation"] = elev if elev != srtm.VOID_VALUE else 0.0
             if i % 5000 == 0:
                 pct = 40 + int((i / total) * 40)
-                _build_status[key]["progress_pct"] = pct
+                _set_progress(key, pct)
 
-        _build_status[key]["progress_pct"] = 80
+        _set_progress(key, 80)
 
         # Step 5: Edge grades
         G = ox.add_edge_grades(G)
-        _build_status[key]["progress_pct"] = 85
+        _set_progress(key, 85)
 
         # Step 6: Keep only largest strongly connected component
         largest_scc = max(nx.strongly_connected_components(G), key=len)
         G.remove_nodes_from(set(G.nodes) - largest_scc)
-        _build_status[key]["progress_pct"] = 90
+        _set_progress(key, 90)
 
         # Step 7: Save to disk. Write to a temp file and swap it into place so
         # other threads never see (and try to load) a half-written .graphml.
