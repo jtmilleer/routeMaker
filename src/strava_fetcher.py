@@ -11,7 +11,7 @@ import threading
 from dotenv import load_dotenv
 from paths import DATA_DIR, CONFIG_DIR
 
-# ── Config ────────────────────────────────────────────────────────────────────
+# Config
 load_dotenv(os.path.join(CONFIG_DIR, ".env"))
 
 CLIENT_ID     = os.getenv("STRAVA_CLIENT_ID")
@@ -21,7 +21,7 @@ TOKEN_FILE    = os.path.join(CONFIG_DIR, "strava_token.json")
 
 MIN_MILES = 10
 
-# ── OAuth Flow ────────────────────────────────────────────────────────────────
+# OAuth Flow
 
 auth_code = None
 
@@ -98,7 +98,7 @@ def load_or_refresh_tokens():
     return tokens
 
 
-# ── Data Fetching ─────────────────────────────────────────────────────────────
+# Data Fetching
 
 def get_activities(access_token, max_rides=100):
     """Fetch cycling activities from Strava."""
@@ -197,8 +197,6 @@ def save_activity_as_gpx(activity_id, access_token, filename=None):
     print(f"Saved: {fname}")
     return fname
 
-
-# ── Main ──────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
     if not CLIENT_ID or not CLIENT_SECRET:

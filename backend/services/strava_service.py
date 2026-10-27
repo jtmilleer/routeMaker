@@ -44,7 +44,7 @@ _oauth_states: dict[str, float] = {}
 _STATE_TTL = 600  # seconds a pending `state` stays valid (10 minutes)
 
 
-# ── OAuth ─────────────────────────────────────────────────────────────────────
+# OAuth
 
 def get_authorization_url() -> str:
     """
@@ -135,7 +135,7 @@ async def refresh_token_if_needed(athlete_id: int, db: AsyncSession) -> str:
     return token_row.access_token
 
 
-# ── Activity Fetching ─────────────────────────────────────────────────────────
+# Activity Fetching
 
 async def fetch_activities(access_token: str, max_rides: int = 400) -> list[dict]:
     """

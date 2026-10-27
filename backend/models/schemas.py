@@ -8,7 +8,7 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 
-# ── Auth ──────────────────────────────────────────────────────────────────────
+# Auth
 
 class TokenResponse(BaseModel):
     """Returned to Angular after successful OAuth. Angular stores the token."""
@@ -19,7 +19,7 @@ class TokenResponse(BaseModel):
     profile_pic_url: Optional[str] = None
 
 
-# ── Users ─────────────────────────────────────────────────────────────────────
+# Users
 
 class UserProfile(BaseModel):
     """Public profile info + model training stats for the dashboard."""
@@ -35,7 +35,7 @@ class UserProfile(BaseModel):
     home_lng: Optional[float] = None
 
 
-# ── Rides ─────────────────────────────────────────────────────────────────────
+# Rides
 
 class RideOut(BaseModel):
     """A single Strava ride returned by GET /api/rides."""
@@ -63,7 +63,7 @@ class SyncSummary(BaseModel):
     total_rides: int
 
 
-# ── Route Generation ──────────────────────────────────────────────────────────
+# Route Generation
 
 class GenerateRequest(BaseModel):
     """
@@ -107,7 +107,7 @@ class RouteResult(BaseModel):
     gpx_path: Optional[str] = Field(default=None, exclude=True)
 
 
-# ── Ratings ───────────────────────────────────────────────────────────────────
+# Ratings
 
 class RideRatingRequest(BaseModel):
     """POST /api/ratings/ride body."""
@@ -138,7 +138,7 @@ class PendingCounts(BaseModel):
     unrated_routes: int
 
 
-# ── Graph ─────────────────────────────────────────────────────────────────────
+# Graph
 
 class GraphStatusResponse(BaseModel):
     """Polled by Angular's map-building-banner while a graph is being built."""
@@ -155,7 +155,7 @@ class GraphRequestBody(BaseModel):
     lng: float = Field(..., ge=-180, le=180)
 
 
-# ── Coverage ────────────────────────────────────────────────────────────────
+# Coverage
 
 class HomeBaseRequest(BaseModel):
     """PUT /api/coverage/home — user sets the center of their coverage area."""

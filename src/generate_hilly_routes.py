@@ -19,7 +19,7 @@ from route_utils import (
     encode_path_to_polyline, predict_score
 )
 
-# ── Config ────────────────────────────────────────────────────────────────────
+# Config
 
 START_LAT    = 41.6543043857067
 START_LNG    = -91.52670199266414
@@ -45,7 +45,7 @@ def route_compactness(G, path):
     ) * 0.000621371
     return straight_line_miles / total_dist if total_dist > 0 else 1.0
 
-# ── Route generation ──────────────────────────────────────────────────────────
+# Route generation
 
 def generate_loop(G, start_node, target_meters, int_ids, int_coords, int_tree, heuristic):
     """
@@ -192,7 +192,7 @@ def save_route_features(results, G):
     df.to_csv(out, index=False)
     print(f"Saved route features to {out}")
 
-# ── Map visualization ─────────────────────────────────────────────────────────
+# Map visualization
 
 def show_routes_in_browser(G, results, top_n=5):
     os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -240,8 +240,6 @@ def show_routes_in_browser(G, results, top_n=5):
     m.save(map_file)
     print(f"\\nOpening map: {map_file}")
     webbrowser.open(f"file:///{os.path.abspath(map_file)}")
-
-# ── Main ──────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
     bundle     = load_model()

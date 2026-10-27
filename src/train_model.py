@@ -15,7 +15,7 @@ GENERATED_FILE  = os.path.join(DATA_DIR, "generated_routes.csv")
 
 MODEL_FILE   = os.path.join(DATA_DIR, "route_model.pkl")
 
-# ── Load & merge data ─────────────────────────────────────────────────────────
+# Load & merge data
 
 def load_training_data():
     rides   = pd.read_csv(RIDES_FILE)
@@ -25,7 +25,7 @@ def load_training_data():
     print(f"Training on {len(df)} rated rides")
     return df
 
-# ── Feature engineering ───────────────────────────────────────────────────────
+# Feature engineering
 
 def build_features(df):
     features = pd.DataFrame()
@@ -46,8 +46,6 @@ def build_features(df):
     features["pr_count"]          = df.get("pr_count",     pd.Series(0, index=df.index)).fillna(0)
 
     return features
-
-# ── Train ─────────────────────────────────────────────────────────────────────
 
 def train(df):
     X = build_features(df)
@@ -76,8 +74,6 @@ def train(df):
 
     return model, scaler, list(X.columns)
 
-# ── Save ──────────────────────────────────────────────────────────────────────
-
 def save_model(model, scaler, feature_names):
     with open(MODEL_FILE, "wb") as f:
         pickle.dump({
@@ -87,7 +83,7 @@ def save_model(model, scaler, feature_names):
         }, f)
     print(f"\nModel saved to {MODEL_FILE}")
 
-# ── Predict (for use in route generator later) ────────────────────────────────
+# Predict (for use in route generator later)
 
 def load_model():
     with open(MODEL_FILE, "rb") as f:
@@ -151,8 +147,6 @@ def load_training_data():
 
     print(f"Total training samples: {len(df)}")
     return df
-
-# ── Main ──────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
     df = load_training_data()

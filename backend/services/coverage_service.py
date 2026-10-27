@@ -34,7 +34,7 @@ SNAP_BUFFER_M = 250.0
 COVERAGE_PENALTY = 6.0
 
 
-# ── Radius subgraph ────────────────────────────────────────────────────────────
+# Radius subgraph
 
 def _radius_subgraph(G: nx.MultiDiGraph, lat: float, lng: float,
                      radius_mi: float) -> nx.MultiDiGraph:
@@ -54,7 +54,7 @@ def _radius_subgraph(G: nx.MultiDiGraph, lat: float, lng: float,
     return G.subgraph(kept).copy()
 
 
-# ── Ride matching (restricted to the area) ──────────────────────────────────────
+# Ride matching (restricted to the area)
 
 def _rides_within_radius(rides_df: pd.DataFrame, lat: float, lng: float,
                          radius_mi: float) -> pd.DataFrame:
@@ -125,7 +125,7 @@ def _unique_undirected_edges(G: nx.MultiDiGraph):
         yield u, v, data
 
 
-# ── Coverage stats + segments ───────────────────────────────────────────────────
+# Coverage stats + segments
 
 def compute_coverage(G: nx.MultiDiGraph, rides_df: pd.DataFrame,
                      lat: float, lng: float, radius_mi: float,
@@ -162,7 +162,7 @@ def compute_coverage(G: nx.MultiDiGraph, rides_df: pd.DataFrame,
     }
 
 
-# ── Completionist route generation ──────────────────────────────────────────────
+# Completionist route generation
 
 def _largest_scc(H: nx.MultiDiGraph) -> nx.MultiDiGraph:
     """Largest strongly connected component as a copy — guarantees A* solvability

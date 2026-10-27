@@ -26,7 +26,7 @@ from backend.core.config import settings
 
 logger = logging.getLogger("routemaker.graph")
 
-# ── In-memory caches ──────────────────────────────────────────────────────────
+# In-memory caches
 
 # city_key → loaded NetworkX graph
 _graph_cache: dict[str, nx.MultiDiGraph] = {}
@@ -35,7 +35,7 @@ _graph_cache: dict[str, nx.MultiDiGraph] = {}
 _build_status: dict[str, dict] = {}
 
 
-# ── Pre-seeded cities ─────────────────────────────────────────────────────────
+# Pre-seeded cities
 
 PRESET_CITIES = {
     "iowa_city": (41.6543, -91.5267),
@@ -46,8 +46,6 @@ PRESET_CITIES = {
 NETWORK_DIST = 50000  # meters radius around center point
 
 
-# ── City key ──────────────────────────────────────────────────────────────────
-
 def city_key(lat: float, lng: float) -> str:
     """
     Round lat/lng to 2 decimal places and return a stable cache key.
@@ -57,15 +55,13 @@ def city_key(lat: float, lng: float) -> str:
     return f"{round(lat, 2)}_{round(lng, 2)}"
 
 
-# ── Graph path ────────────────────────────────────────────────────────────────
-
 def graph_path(key: str) -> str:
     """Return the filesystem path for a cached graph file."""
     os.makedirs(settings.graphs_dir, exist_ok=True)
     return os.path.join(settings.graphs_dir, f"{key}.graphml")
 
 
-# ── Status helpers ────────────────────────────────────────────────────────────
+# Status helpers
 
 def get_graph_status(key: str) -> dict:
     """Return current build status for a city key."""
@@ -91,7 +87,7 @@ def get_graph_status(key: str) -> dict:
             "node_count": None, "edge_count": None}
 
 
-# ── Graph loading ─────────────────────────────────────────────────────────────
+# Graph loading
 
 def _load_graph(key: str) -> nx.MultiDiGraph:
     """Load a graph from disk into the memory cache. Blocking — run in thread pool."""
@@ -120,7 +116,7 @@ def get_graph_sync(lat: float, lng: float) -> Optional[nx.MultiDiGraph]:
     return None
 
 
-# ── Covering-graph lookup (for coverage feature) ───────────────────────────────
+# Covering-graph lookup (for coverage feature)
 # Each graph spans a ~50km radius, so a point near ANY built graph's center is
 # already inside it. The coverage feature reuses such a graph instead of building
 # a fresh 50km network just because the rounded city_key differs by a notch.
@@ -187,7 +183,7 @@ def find_covering_graph(lat: float, lng: float,
     return None
 
 
-# ── Graph building ────────────────────────────────────────────────────────────
+# Graph building
 
 async def request_graph_build(lat: float, lng: float):
     """
@@ -317,7 +313,7 @@ def _build_graph_blocking(lat: float, lng: float, key: str):
         logger.exception("Build FAILED for %s: %s", key, e)
 
 
-# ── Startup seeding ───────────────────────────────────────────────────────────
+# Startup seeding
 
 async def seed_preset_cities():
     """
@@ -340,7 +336,7 @@ async def seed_preset_cities():
             await request_graph_build(lat, lng)
 
 
-# ── Spatial index ─────────────────────────────────────────────────────────────
+# Spatial index
 
 def build_intersection_index(G: nx.MultiDiGraph) -> tuple:
     """
@@ -362,7 +358,7 @@ def nearest_intersection(ids, coords, tree, lat: float, lng: float) -> int:
     return ids[idx]
 
 
-# ── Ridden-edge marking (for novel routes, per-user) ─────────────────────────
+# Ridden-edge marking (for novel routes, per-user)
 
 def mark_ridden_edges(G: nx.MultiDiGraph, rides_df: pd.DataFrame,
                       novelty_factor: float = 5.0) -> nx.MultiDiGraph:

@@ -19,7 +19,7 @@ from route_utils import (
     encode_path_to_polyline, predict_score
 )
 
-# ── Config ────────────────────────────────────────────────────────────────────
+# Config
 
 START_LAT    = 41.6543043857067
 START_LNG    = -91.52670199266414
@@ -32,7 +32,7 @@ DOWNTOWN_RADIUS = 1000
 OUTPUT_DIR   = ROUTES_DIR
 HISTORIC_FILE = os.path.join(DATA_DIR, "iowa_city_historic_sites.csv")
 
-# ── Route generation ──────────────────────────────────────────────────────────
+# Route generation
 
 def generate_loop(G, start_node, target_meters, int_ids, int_coords, int_tree, heuristic, valid_historic_nodes):
     start_lat = float(G.nodes[start_node]["y"])
@@ -116,7 +116,7 @@ def generate_loop(G, start_node, target_meters, int_ids, int_coords, int_tree, h
 
     return None, None, None, None, None, None
 
-# ── Coords + GPX ─────────────────────────────────────────────────────────────
+# Coords + GPX
 
 def save_gpx(coords, historic_info, filename, route_name):
     os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -164,7 +164,7 @@ def save_route_features(results, G):
     df.to_csv(out, index=False)
     print(f"Saved route features to {out}")
 
-# ── Map visualization ─────────────────────────────────────────────────────────
+# Map visualization
 
 def show_routes_in_browser(G, results, valid_historic_nodes, top_n=5, no_browser=False):
     os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -252,8 +252,6 @@ def show_routes_in_browser(G, results, valid_historic_nodes, top_n=5, no_browser
     if not no_browser:
         print(f"\nOpening map: {map_file}")
         webbrowser.open(f"file:///{os.path.abspath(map_file)}")
-
-# ── Main ──────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

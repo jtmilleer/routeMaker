@@ -29,14 +29,10 @@ RETRAIN_THRESHOLD = 10
 _model_cache: dict[int, dict] = {}
 
 
-# ── Paths ─────────────────────────────────────────────────────────────────────
-
 def user_model_path(athlete_id: int) -> str:
     os.makedirs(settings.models_dir, exist_ok=True)
     return os.path.join(settings.models_dir, f"{athlete_id}.pkl")
 
-
-# ── Load ──────────────────────────────────────────────────────────────────────
 
 def get_model(athlete_id: int) -> dict:
     """
@@ -98,8 +94,6 @@ def predict_score(athlete_id: int, route_features: dict) -> float:
     return round(float(np.clip(score, 1, 10)), 2)
 
 
-# ── Retrain ───────────────────────────────────────────────────────────────────
-
 async def retrain_model(athlete_id: int, db: AsyncSession) -> None:
     """
     Retrain the user's personal GradientBoostingRegressor on all their rated
@@ -108,7 +102,7 @@ async def retrain_model(athlete_id: int, db: AsyncSession) -> None:
 
     Called as a FastAPI BackgroundTask when total_ratings % RETRAIN_THRESHOLD == 0.
     """
-    # ── Gather ride ratings ────────────────────────────────────────────────────
+    # Gather ride ratings
     ride_rows = await db.execute(
         select(Ride, RideRating.rating)
         .join(RideRating, (RideRating.ride_id == Ride.id) & (RideRating.athlete_id == athlete_id))
@@ -128,7 +122,7 @@ async def retrain_model(athlete_id: int, db: AsyncSession) -> None:
         for r in ride_rows.all()
     ]
 
-    # ── Gather generated route feedback ───────────────────────────────────────
+    # Gather generated route feedback
     fb_rows = await db.execute(
         select(GeneratedRoute, RouteFeedback.rating)
         .join(RouteFeedback,
@@ -157,7 +151,7 @@ async def retrain_model(athlete_id: int, db: AsyncSession) -> None:
 
     df = pd.DataFrame(all_data)
 
-    # ── Feature engineering (mirrors train_model.py) ──────────────────────────
+    # Feature engineering (mirrors train_model.py)
     X = pd.DataFrame()
     X["distance_mi"]     = df["distance_mi"]
     X["elevation_ft"]    = df["elevation_ft"].fillna(0)
@@ -171,7 +165,6 @@ async def retrain_model(athlete_id: int, db: AsyncSession) -> None:
     X["pr_count"]        = df["pr_count"].fillna(0)
     y = df["rating"].astype(float)
 
-    # ── Train ─────────────────────────────────────────────────────────────────
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
 
@@ -183,7 +176,6 @@ async def retrain_model(athlete_id: int, db: AsyncSession) -> None:
     )
     model.fit(X_scaled, y)
 
-    # ── Save ──────────────────────────────────────────────────────────────────
     bundle = {"model": model, "scaler": scaler, "feature_names": list(X.columns)}
     with open(user_model_path(athlete_id), "wb") as f:
         pickle.dump(bundle, f)

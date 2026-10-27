@@ -16,7 +16,7 @@ MODEL_FILE = os.path.join(DATA_DIR, "route_model.pkl")
 GRAPH_FILE = os.path.join(DATA_DIR, "iowa_city_network.graphml")
 SRTM_CACHE = os.path.join(DATA_DIR, "srtm_cache")
 
-# ── Load model ────────────────────────────────────────────────────────────────
+# Load model
 
 def load_model():
     with open(MODEL_FILE, "rb") as f:
@@ -45,7 +45,7 @@ def predict_score(bundle, route_features: dict) -> float:
     score     = model.predict(X_scaled)[0]
     return round(float(np.clip(score, 1, 10)), 2)
 
-# ── Elevation ─────────────────────────────────────────────────────────────────
+# Elevation
 
 #def add_elevation_to_graph(G):
 #    """Fetch elevation using USGS EPQS with parallel requests and retry logic."""
@@ -126,7 +126,7 @@ def add_elevation_to_graph(G):
     return G
     
 
-# ── Road network ──────────────────────────────────────────────────────────────
+# Road network
 
 def mark_hilly_edges(G, hilly_factor):
     print("Adjusting routing weights to favor hilly roads...")
@@ -203,7 +203,7 @@ def get_network(start_lat, start_lng, network_dist, hilly_factor):
     print(f"Network processing finished: {len(G.nodes)} nodes, {len(G.edges)} edges")
     return mark_hilly_edges(G, hilly_factor)
 
-# ── Spatial index ─────────────────────────────────────────────────────────────
+# Spatial index
 
 def build_intersection_index(G):
     G_undir = G.to_undirected()
@@ -218,7 +218,7 @@ def nearest_intersection(ids, coords, tree, lat, lng):
     _, idx = tree.query([lat, lng])
     return ids[idx]
 
-# ── Route helpers ─────────────────────────────────────────────────────────────
+# Route helpers
 
 def meters_to_miles(m):
     return m * 0.000621371

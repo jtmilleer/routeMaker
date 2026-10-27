@@ -16,7 +16,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from scipy.spatial import KDTree
 from paths import DATA_DIR, ROUTES_DIR
 
-# ── Config ────────────────────────────────────────────────────────────────────
+# Config
 
 START_LAT    = 41.6543043857067
 START_LNG    = -91.52670199266414
@@ -29,7 +29,7 @@ OUTPUT_DIR   = ROUTES_DIR
 MODEL_FILE   = os.path.join(DATA_DIR, "route_model.pkl")
 GRAPH_FILE   = os.path.join(DATA_DIR, "iowa_city_network.graphml")
 
-# ── Load model ────────────────────────────────────────────────────────────────
+# Load model
 
 def load_model():
     with open(MODEL_FILE, "rb") as f:
@@ -58,7 +58,7 @@ def predict_score(bundle, route_features: dict) -> float:
     score     = model.predict(X_scaled)[0]
     return round(float(np.clip(score, 1, 10)), 2)
 
-# ── Elevation ─────────────────────────────────────────────────────────────────
+# Elevation
 
 def add_elevation_to_graph(G):
     """Fetch elevation using USGS EPQS with parallel requests and retry logic."""
@@ -96,7 +96,7 @@ def add_elevation_to_graph(G):
     print(f"Done. Missing: {missing}/{total}")
     return G
 
-# ── Road network ──────────────────────────────────────────────────────────────
+# Road network
 
 def get_network():
     if os.path.exists(GRAPH_FILE):
@@ -232,7 +232,7 @@ def calculate_novelty_percentage(G, path):
             novel_dist += dist
     return (novel_dist / total_dist * 100) if total_dist > 0 else 0
 
-# ── Spatial index ─────────────────────────────────────────────────────────────
+# Spatial index
 
 def build_intersection_index(G):
     """Build a KD-tree spatial index of intersection nodes (degree >= 3)."""
@@ -249,7 +249,7 @@ def nearest_intersection(ids, coords, tree, lat, lng):
     _, idx = tree.query([lat, lng])
     return ids[idx]
 
-# ── Route helpers ─────────────────────────────────────────────────────────────
+# Route helpers
 
 def meters_to_miles(m):
     return m * 0.000621371
@@ -345,7 +345,7 @@ def route_compactness(G, path):
     ) * 0.000621371
     return straight_line_miles / total_dist if total_dist > 0 else 1.0
 
-# ── Route generation ──────────────────────────────────────────────────────────
+# Route generation
 
 def generate_loop(G, start_node, target_meters, int_ids, int_coords, int_tree, heuristic):
     """
@@ -453,7 +453,7 @@ def generate_loop(G, start_node, target_meters, int_ids, int_coords, int_tree, h
 
     return None, None
 
-# ── Coords + GPX ─────────────────────────────────────────────────────────────
+# Coords + GPX
 
 def path_to_coords(G, path):
     """Convert node path to (lat, lng, elev) using full edge geometry."""
@@ -584,7 +584,7 @@ def encode_path_to_segments(G, path):
         
     return json.dumps(segments)
 
-# ── Map visualization ─────────────────────────────────────────────────────────
+# Map visualization
 
 def show_routes_in_browser(G, results, top_n=5):
     os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -641,8 +641,6 @@ def show_routes_in_browser(G, results, top_n=5):
     m.save(map_file)
     print(f"\nOpening map: {map_file}")
     webbrowser.open(f"file:///{os.path.abspath(map_file)}")
-
-# ── Main ──────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
     bundle     = load_model()

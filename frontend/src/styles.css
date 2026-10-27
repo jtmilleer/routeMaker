@@ -4,7 +4,7 @@
 /* Leaflet map styles */
 @import 'leaflet/dist/leaflet.css';
 
-/* ── Design System: Field Guide / Trail Poster ─────────────────────── */
+/* Design System: Field Guide / Trail Poster */
 :root {
   /* Typography */
   --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;

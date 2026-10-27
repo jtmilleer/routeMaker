@@ -71,7 +71,6 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# ── CORS ──────────────────────────────────────────────────────────────────────
 # Allow the Angular dev server and, in production, the deployed frontend URL.
 allowed_origins = [
     "http://localhost:4200",   # Angular dev server
@@ -86,7 +85,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ── Routers ───────────────────────────────────────────────────────────────────
 app.include_router(auth.router)
 app.include_router(routes.router)
 app.include_router(rides.router)

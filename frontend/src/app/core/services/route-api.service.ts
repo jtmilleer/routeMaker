@@ -8,7 +8,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+// Types
 
 export interface GenerateRequest {
   route_type: 'regular' | 'hilly' | 'historic' | 'novel' | 'coverage';
@@ -105,8 +105,6 @@ export interface CoverageResponse {
   ridden_mi: number;
   segments: CoverageSegment[];
 }
-
-// ── Service ───────────────────────────────────────────────────────────────────
 
 @Injectable({ providedIn: 'root' })
 export class RouteApiService {
