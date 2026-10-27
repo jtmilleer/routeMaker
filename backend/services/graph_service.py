@@ -292,8 +292,16 @@ def _build_graph_blocking(lat: float, lng: float, key: str):
         G.remove_nodes_from(set(G.nodes) - largest_scc)
         _build_status[key]["progress_pct"] = 90
 
-        # Step 7: Save to disk
-        ox.save_graphml(G, graph_path(key))
+        # Step 7: Save to disk. Write to a temp file and swap it into place so
+        # other threads never see (and try to load) a half-written .graphml.
+        path = graph_path(key)
+        tmp_path = f"{path}.tmp"
+        try:
+            ox.save_graphml(G, tmp_path)
+            os.replace(tmp_path, path)
+        finally:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
         _graph_cache[key] = G
 
         _build_status[key] = {
