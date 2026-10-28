@@ -92,7 +92,7 @@ async def exchange_code(code: str) -> dict:
     Exchange the OAuth authorization code for access + refresh tokens.
     Returns the full token payload from Strava (includes athlete profile).
     """
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=30) as client:
         resp = await client.post(STRAVA_TOKEN_URL, data={
             "client_id": settings.strava_client_id,
             "client_secret": settings.strava_client_secret,
@@ -117,7 +117,7 @@ async def refresh_token_if_needed(athlete_id: int, db: AsyncSession) -> str:
 
     # Refresh if expired or expiring in the next 60 seconds
     if token_row.expires_at - time.time() < 60:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=30) as client:
             resp = await client.post(STRAVA_TOKEN_URL, data={
                 "client_id": settings.strava_client_id,
                 "client_secret": settings.strava_client_secret,
@@ -147,7 +147,7 @@ async def fetch_activities(access_token: str) -> list[dict]:
     rides = []
     page = 1
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=30) as client:
         while True:
             resp = await client.get(
                 f"{STRAVA_API_BASE}/athlete/activities",
