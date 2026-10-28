@@ -10,6 +10,7 @@ import gzip
 import logging
 import math
 import os
+import threading
 import time
 import urllib.request
 from typing import Optional
@@ -18,6 +19,8 @@ import networkx as nx
 import numpy as np
 import osmnx as ox
 import pandas as pd
+import requests
+from osmnx._errors import ResponseStatusCodeError
 from scipy.spatial import KDTree
 
 import srtm
@@ -226,14 +229,53 @@ def _ensure_srtm_tiles(coords: list[tuple[float, float]], cache_dir: str):
         lat_band = filename[:3]
         url = f"{SRTM_BASE_URL}/{lat_band}/{filename}.gz"
         logger.info("Downloading SRTM tile %s ...", filename)
+        # Write to a temp file and swap it into place, so an interrupted download
+        # never leaves a partial tile that later builds would treat as complete.
+        tmp_path = f"{path}.tmp"
         try:
             resp = urllib.request.urlopen(url)
             with gzip.open(resp, "rb") as gz:
-                with open(path, "wb") as f:
+                with open(tmp_path, "wb") as f:
                     f.write(gz.read())
+            os.replace(tmp_path, path)
             logger.info("Downloaded %s", filename)
         except Exception as e:
             logger.warning("Failed to download %s: %s", filename, e)
+        finally:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+
+
+# One Overpass download at a time: the public server rejects bursts of parallel
+# queries. osmnx caches each completed sub-query in ./cache, so a retry resumes
+# where the failed attempt stopped instead of re-downloading everything.
+_overpass_lock = threading.Lock()
+DOWNLOAD_ATTEMPTS = 5
+DOWNLOAD_BACKOFF_S = 30  # doubles after each failed attempt
+
+
+def _first_line(e: Exception) -> str:
+    """Overpass errors embed a whole help page; keep just the headline."""
+    return str(e).strip().splitlines()[0] if str(e).strip() else type(e).__name__
+
+
+def _download_network(lat: float, lng: float, key: str) -> nx.MultiDiGraph:
+    """Download the bike network from Overpass, retrying with exponential backoff
+    when the server is overloaded or unreachable."""
+    with _overpass_lock:
+        for attempt in range(1, DOWNLOAD_ATTEMPTS + 1):
+            logger.info("Downloading OSM network for %s (%dkm radius), attempt %d/%d...",
+                        key, NETWORK_DIST // 1000, attempt, DOWNLOAD_ATTEMPTS)
+            try:
+                return ox.graph_from_point((lat, lng), dist=NETWORK_DIST,
+                                           network_type="bike", simplify=True)
+            except (ResponseStatusCodeError, requests.RequestException) as e:
+                if attempt == DOWNLOAD_ATTEMPTS:
+                    raise
+                wait = DOWNLOAD_BACKOFF_S * 2 ** (attempt - 1)
+                logger.warning("Download for %s failed: %s. Retrying in %ds",
+                               key, _first_line(e), wait)
+                time.sleep(wait)
 
 
 def _set_progress(key: str, pct: int):
@@ -255,9 +297,7 @@ def _build_graph_blocking(lat: float, lng: float, key: str):
         _set_progress(key, 5)
 
         # Step 1: Download from OpenStreetMap
-        logger.info("Downloading OSM network for %s (%dkm radius)...", key, NETWORK_DIST // 1000)
-        G = ox.graph_from_point((lat, lng), dist=NETWORK_DIST,
-                                 network_type="bike", simplify=True)
+        G = _download_network(lat, lng, key)
         _set_progress(key, 20)
 
         # Step 2: Remove highways unsuitable for cycling
@@ -318,8 +358,8 @@ def _build_graph_blocking(lat: float, lng: float, key: str):
     except Exception as e:
         _build_status[key] = {"status": "error", "progress_pct": 0,
                                "node_count": None, "edge_count": None,
-                               "error": str(e)}
-        logger.exception("Build FAILED for %s: %s", key, e)
+                               "error": _first_line(e)}
+        logger.exception("Build FAILED for %s: %s", key, _first_line(e))
 
 
 # Startup seeding
