@@ -4,11 +4,13 @@
 //          now lives in AppShellComponent + RateShellComponent's sub-nav.
 
 import { Component, OnInit, AfterViewChecked, ElementRef, ViewChild, signal, computed } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import * as L from 'leaflet';
 import { RouteApiService, Ride, RatingStats } from '../../../core/services/route-api.service';
 import { PendingRatingsService } from '../../../core/services/pending-ratings.service';
+import { RideSyncService } from '../../../core/services/ride-sync.service';
 import { BASEMAP_TILE_URL } from '../../../shared/utils/map-tiles';
 
 function decodePolyline(encoded: string): [number, number][] {
@@ -51,10 +53,10 @@ function decodePolyline(encoded: string): [number, number][] {
 
       <ng-container *ngIf="viewMode() === 'pending'">
         <div class="sync-row">
-          <button class="sync-btn" (click)="syncRides()" [disabled]="syncing()" id="sync-rides-btn">
-            {{ syncing() ? 'Syncing...' : 'Sync from Strava' }}
+          <button class="sync-btn" (click)="rideSync.sync()" [disabled]="rideSync.syncing()" id="sync-rides-btn">
+            {{ rideSync.syncing() ? 'Syncing...' : 'Sync from Strava' }}
           </button>
-          <span class="hint" *ngIf="syncMsg()">{{ syncMsg() }}</span>
+          <span class="hint" *ngIf="rideSync.message()">{{ rideSync.message() }}</span>
         </div>
 
         <div class="ride-card" *ngIf="!done() && currentRide() as ride">
@@ -224,8 +226,6 @@ export class RateRidesComponent implements OnInit, AfterViewChecked {
   selectedRating = signal<number | null>(null);
   stats = signal<RatingStats | null>(null);
   loading = signal(true);
-  syncing = signal(false);
-  syncMsg = signal('');
   done = signal(false);
   viewMode = signal<'pending' | 'rated'>('pending');
   ratingValues = [1,2,3,4,5,6,7,8,9,10];
@@ -236,7 +236,17 @@ export class RateRidesComponent implements OnInit, AfterViewChecked {
 
   currentRide = computed<Ride | null>(() => this.rides()[this.currentIndex()] ?? null);
 
-  constructor(private api: RouteApiService, private pending: PendingRatingsService) {}
+  constructor(
+    private api: RouteApiService,
+    private pending: PendingRatingsService,
+    public rideSync: RideSyncService,
+  ) {
+    // Reload the queue when a sync (this page's button or the app-load one) adds rides.
+    this.rideSync.synced$.pipe(takeUntilDestroyed()).subscribe(() => {
+      this.renderedRideId = null;
+      this.ngOnInit();
+    });
+  }
 
   ngOnInit(): void {
     this.loading.set(true);
@@ -290,20 +300,6 @@ export class RateRidesComponent implements OnInit, AfterViewChecked {
 
     const line = L.polyline(points, { color: '#a8471f', weight: 3, opacity: 0.9 }).addTo(this.map);
     this.map.fitBounds(line.getBounds(), { padding: [20, 20] });
-  }
-
-  syncRides(): void {
-    this.syncing.set(true);
-    this.api.syncRides().subscribe({
-      next: s => {
-        this.syncMsg.set(`${s.new_rides} new rides synced (${s.total_rides} total)`);
-        this.syncing.set(false);
-        this.renderedRideId = null;
-        this.pending.refresh();
-        this.ngOnInit();
-      },
-      error: () => this.syncing.set(false)
-    });
   }
 
   rate(r: number): void {

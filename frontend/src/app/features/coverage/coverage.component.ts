@@ -7,6 +7,7 @@
 import {
   Component, AfterViewInit, OnDestroy, ElementRef, ViewChild, signal,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import * as L from 'leaflet';
@@ -14,6 +15,7 @@ import * as L from 'leaflet';
 import { AuthService } from '../../core/services/auth.service';
 import { RouteApiService, CoverageResponse, RouteResult, CoverageActivity } from '../../core/services/route-api.service';
 import { PendingRatingsService } from '../../core/services/pending-ratings.service';
+import { RideSyncService } from '../../core/services/ride-sync.service';
 import { decodePolyline } from '../../shared/utils/polyline';
 import { BASEMAP_TILE_URL } from '../../shared/utils/map-tiles';
 
@@ -66,10 +68,10 @@ const DEFAULT_CENTER: [number, number] = [41.6543, -91.5267];  // Iowa City
               <button [class.active]="activity() === 'walk'" (click)="setActivity('walk')">Walk</button>
               <button [class.active]="activity() === 'both'" (click)="setActivity('both')">Both</button>
             </div>
-            <button class="ghost sync" [disabled]="syncing()" (click)="syncFromStrava()">
-              {{ syncing() ? 'Syncing…' : 'Sync from Strava' }}
+            <button class="ghost sync" [disabled]="rideSync.syncing()" (click)="rideSync.sync()">
+              {{ rideSync.syncing() ? 'Syncing…' : 'Sync from Strava' }}
             </button>
-            <p class="hint" *ngIf="syncMsg()">{{ syncMsg() }}</p>
+            <p class="hint" *ngIf="rideSync.message()">{{ rideSync.message() }}</p>
             <div class="stat">
               <span class="pct">{{ coverage()?.coverage_pct ?? 0 }}%</span>
               <span class="stat-label">covered</span>
@@ -168,8 +170,6 @@ export class CoverageComponent implements AfterViewInit, OnDestroy {
   loading = signal(false);
   saving = signal(false);
   generating = signal(false);
-  syncing = signal(false);
-  syncMsg = signal<string | null>(null);
   buildPct = signal(0);
   error = signal<string | null>(null);
 
@@ -192,7 +192,18 @@ export class CoverageComponent implements AfterViewInit, OnDestroy {
   private pollTimer?: ReturnType<typeof setTimeout>;
   private radiusDebounce?: ReturnType<typeof setTimeout>;
 
-  constructor(public auth: AuthService, private api: RouteApiService, private pending: PendingRatingsService) {}
+  constructor(
+    public auth: AuthService,
+    private api: RouteApiService,
+    private pending: PendingRatingsService,
+    public rideSync: RideSyncService,
+  ) {
+    // Refresh coverage when a sync (this page's button or the app-load one) adds
+    // activities, so new walks/runs/rides show up without leaving the page.
+    this.rideSync.synced$.pipe(takeUntilDestroyed()).subscribe(() => {
+      if (this.mode() === 'ready') this.loadCoverage();
+    });
+  }
 
   ngAfterViewInit(): void {
     const user = this.auth.currentUser();
@@ -324,24 +335,6 @@ export class CoverageComponent implements AfterViewInit, OnDestroy {
     this.routeLayer.clearLayers();
     this.routes.set([]);
     this.loadCoverage();
-  }
-
-  /** Pull the latest activities from Strava, then refresh coverage so newly
-   *  imported walks/runs/rides show up without leaving this page. */
-  syncFromStrava(): void {
-    this.syncing.set(true);
-    this.syncMsg.set(null);
-    this.api.syncRides().subscribe({
-      next: s => {
-        this.syncing.set(false);
-        this.syncMsg.set(`${s.new_rides} new (${s.total_rides} total)`);
-        this.loadCoverage();
-      },
-      error: () => {
-        this.syncing.set(false);
-        this.syncMsg.set('Sync failed — try again.');
-      },
-    });
   }
 
   loadCoverage(): void {

@@ -8,6 +8,7 @@ import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { PendingRatingsService } from '../../../core/services/pending-ratings.service';
+import { RideSyncService } from '../../../core/services/ride-sync.service';
 import { MapBuildingBannerComponent } from '../map-building-banner/map-building-banner.component';
 
 @Component({
@@ -74,9 +75,15 @@ import { MapBuildingBannerComponent } from '../map-building-banner/map-building-
   `]
 })
 export class AppShellComponent implements OnInit {
-  constructor(public auth: AuthService, public pending: PendingRatingsService) {}
+  constructor(
+    public auth: AuthService,
+    public pending: PendingRatingsService,
+    private rideSync: RideSyncService,
+  ) {}
 
   ngOnInit(): void {
     this.pending.refresh();
+    // Pull in anything recorded since the last visit so no page needs a manual sync.
+    this.rideSync.sync();
   }
 }
