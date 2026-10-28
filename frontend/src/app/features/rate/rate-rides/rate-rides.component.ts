@@ -9,6 +9,7 @@ import { RouterLink } from '@angular/router';
 import * as L from 'leaflet';
 import { RouteApiService, Ride, RatingStats } from '../../../core/services/route-api.service';
 import { PendingRatingsService } from '../../../core/services/pending-ratings.service';
+import { BASEMAP_TILE_URL } from '../../../shared/utils/map-tiles';
 
 function decodePolyline(encoded: string): [number, number][] {
   const points: [number, number][] = [];
@@ -285,7 +286,7 @@ export class RateRidesComponent implements OnInit, AfterViewChecked {
       touchZoom: false,
     });
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    L.tileLayer(BASEMAP_TILE_URL, {
       maxZoom: 18,
     }).addTo(this.map);
 

@@ -80,6 +80,14 @@ npm install
 cd ..
 ```
 
+Add a CARTO basemaps key for the map tiles. Get one free at https://carto.com/basemaps/apikey, then copy the template and paste the key into `CARTO_API_KEY`:
+
+```
+cp frontend/src/environments/carto-key.example.ts frontend/src/environments/carto-key.ts
+```
+
+`carto-key.ts` is gitignored. The frontend won't build without it, and the maps show an "API KEY REQUIRED" watermark until the key is set.
+
 ## Running
 
 In two terminals from the project root:

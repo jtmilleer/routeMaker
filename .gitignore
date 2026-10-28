@@ -1,5 +1,6 @@
 # Credentials and secrets
 backend/.env
+frontend/src/environments/carto-key.ts
 config/.env
 config/strava_token.json
 

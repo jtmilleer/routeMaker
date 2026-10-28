@@ -30,6 +30,10 @@ npm run build                        # ng build -> dist/
 npm test                             # ng test (Vitest runner)
 ```
 
+First-time frontend setup: copy `frontend/src/environments/carto-key.example.ts` to
+`carto-key.ts` (gitignored) and add a free CARTO basemaps key — the build fails without
+the file, and map tiles are watermarked without the key.
+
 There is no backend test suite (no `test*` files under `backend/`). Frontend has only
 the Angular CLI boilerplate spec (`app.spec.ts`) — no meaningful test coverage exists
 on either side yet. Don't assume `npm test` or a pytest command validates behavior.

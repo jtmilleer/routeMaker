@@ -15,6 +15,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { RouteApiService, CoverageResponse, RouteResult, CoverageActivity } from '../../core/services/route-api.service';
 import { PendingRatingsService } from '../../core/services/pending-ratings.service';
 import { decodePolyline } from '../../shared/utils/polyline';
+import { BASEMAP_TILE_URL } from '../../shared/utils/map-tiles';
 
 // Leaflet's default marker icons break under bundlers — point them at the CDN.
 const iconDefault = L.icon({
@@ -197,7 +198,7 @@ export class CoverageComponent implements AfterViewInit, OnDestroy {
       : DEFAULT_CENTER;
 
     this.map = L.map(this.mapEl.nativeElement, { center, zoom: hasHome ? 14 : 12 });
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    L.tileLayer(BASEMAP_TILE_URL, {
       attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 19,
     }).addTo(this.map);
     this.coverageLayer.addTo(this.map);

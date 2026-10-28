@@ -15,6 +15,7 @@ import * as L from 'leaflet';
 import { RouteStateService, ActiveCity } from '../../core/services/route-state.service';
 import { RouteResult } from '../../core/services/route-api.service';
 import { decodePolyline } from '../../shared/utils/polyline';
+import { BASEMAP_TILE_URL } from '../../shared/utils/map-tiles';
 
 // Fix Leaflet default marker icon path issue with bundlers
 const iconDefault = L.icon({
@@ -74,7 +75,7 @@ export class MapViewComponent implements AfterViewInit, OnDestroy {
     });
 
     // Warm paper-toned tile layer (Field Guide theme)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    L.tileLayer(BASEMAP_TILE_URL, {
       attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
       maxZoom: 19,
     }).addTo(this.map);
