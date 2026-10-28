@@ -138,21 +138,25 @@ async def refresh_token_if_needed(athlete_id: int, db: AsyncSession) -> str:
 
 # Activity Fetching
 
-async def fetch_activities(access_token: str) -> list[dict]:
+async def fetch_activities(access_token: str, after: Optional[int] = None) -> list[dict]:
     """
-    Page through all of /athlete/activities and collect cycling AND foot activities
+    Page through /athlete/activities and collect cycling AND foot activities
     (walk/run/hike). Other sport types are skipped. Stops at the first empty page.
+    `after` (Unix epoch seconds) limits the fetch to activities that started later.
     """
     headers = {"Authorization": f"Bearer {access_token}"}
     rides = []
     page = 1
+    params = {"per_page": 200}
+    if after is not None:
+        params["after"] = after
 
     async with httpx.AsyncClient(timeout=30) as client:
         while True:
             resp = await client.get(
                 f"{STRAVA_API_BASE}/athlete/activities",
                 headers=headers,
-                params={"per_page": 200, "page": page},
+                params={**params, "page": page},
             )
             resp.raise_for_status()
             batch = resp.json()

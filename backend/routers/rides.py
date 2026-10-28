@@ -1,10 +1,10 @@
 # LAYER: Router — Ride Management
 # PURPOSE: Syncing rides from Strava and listing them with user ratings merged in.
 
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.db import get_db
@@ -15,6 +15,10 @@ from backend.services import strava_service, track_service
 
 router = APIRouter(prefix="/api/rides", tags=["rides"])
 
+# Ride.date is Strava's start_date_local, but `after` filters on UTC start time.
+# Back off past any timezone offset; rides already stored are skipped anyway.
+SYNC_OVERLAP = timedelta(days=2)
+
 
 @router.post("/sync", response_model=SyncSummary)
 async def sync_rides(
@@ -22,12 +26,17 @@ async def sync_rides(
     athlete_id: int = Depends(get_current_user),
 ):
     """
-    Fetch the latest cycling activities from Strava and upsert into the local DB.
+    Fetch activities newer than the latest stored one from Strava and insert
+    them into the local DB (the first sync fetches the full history).
     Returns a count of new rides added and the total ride count.
     Refreshes the access token if expired before making any Strava calls.
     """
     access_token = await strava_service.refresh_token_if_needed(athlete_id, db)
-    activities = await strava_service.fetch_activities(access_token)
+    latest = await db.scalar(select(func.max(Ride.date)).where(Ride.athlete_id == athlete_id))
+    after = None
+    if latest is not None:
+        after = int((latest.replace(tzinfo=timezone.utc) - SYNC_OVERLAP).timestamp())
+    activities = await strava_service.fetch_activities(access_token, after=after)
     df = strava_service.activities_to_df(activities)
 
     new_count = 0
