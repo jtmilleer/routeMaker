@@ -3,7 +3,7 @@
 //          and conditional type-specific options. Submits to the API via
 //          RouteApiService and updates state via RouteStateService.
 
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouteApiService, GenerateRequest } from '../../../core/services/route-api.service';
@@ -25,8 +25,8 @@ type RouteType = 'regular' | 'hilly' | 'historic' | 'novel';
         <label class="label">Route Mode</label>
         <div class="mode-grid">
           <button *ngFor="let t of routeTypes" class="mode-btn"
-            [class.active]="routeType === t.value"
-            (click)="routeType = t.value"
+            [class.active]="routeType() === t.value"
+            (click)="routeType.set(t.value)"
             [id]="'mode-' + t.value">
             {{ t.label }}
           </button>
@@ -35,36 +35,36 @@ type RouteType = 'regular' | 'hilly' | 'historic' | 'novel';
 
       <!-- Distance -->
       <div class="form-group">
-        <label class="label">Distance: <span class="val accent">{{ distance }} mi</span></label>
-        <input id="distance-slider" type="range" class="slider" min="10" max="100" step="1" [(ngModel)]="distance">
+        <label class="label">Distance: <span class="val accent">{{ distance() }} mi</span></label>
+        <input id="distance-slider" type="range" class="slider" min="10" max="100" step="1" [ngModel]="distance()" (ngModelChange)="distance.set($event)">
         <div class="slider-range"><span>10</span><span>100 mi</span></div>
       </div>
 
       <!-- Tolerance -->
       <div class="form-group">
-        <label class="label">Tolerance: <span class="val accent">&plusmn;{{ (tolerance * 100).toFixed(0) }}%</span></label>
-        <input id="tolerance-slider" type="range" class="slider" min="0.05" max="0.5" step="0.05" [(ngModel)]="tolerance">
+        <label class="label">Tolerance: <span class="val accent">&plusmn;{{ (tolerance() * 100).toFixed(0) }}%</span></label>
+        <input id="tolerance-slider" type="range" class="slider" min="0.05" max="0.5" step="0.05" [ngModel]="tolerance()" (ngModelChange)="tolerance.set($event)">
         <div class="slider-range"><span>5%</span><span>50%</span></div>
       </div>
 
       <!-- Hilly factor (hilly mode only) -->
-      <div class="form-group" *ngIf="routeType === 'hilly'">
-        <label class="label">Hilly Factor: <span class="val accent">{{ hillyFactor }}</span></label>
-        <input id="hilly-factor-slider" type="range" class="slider" min="0" max="500" step="10" [(ngModel)]="hillyFactor">
+      <div class="form-group" *ngIf="routeType() === 'hilly'">
+        <label class="label">Hilly Factor: <span class="val accent">{{ hillyFactor() }}</span></label>
+        <input id="hilly-factor-slider" type="range" class="slider" min="0" max="500" step="10" [ngModel]="hillyFactor()" (ngModelChange)="hillyFactor.set($event)">
         <div class="slider-range"><span>Flat</span><span>Very hilly</span></div>
       </div>
 
       <!-- Downtown radius (historic mode only) -->
-      <div class="form-group" *ngIf="routeType === 'historic'">
-        <label class="label">Historic Site Radius: <span class="val accent">{{ downtownRadius }}m</span></label>
-        <input id="radius-slider" type="range" class="slider" min="500" max="5000" step="100" [(ngModel)]="downtownRadius">
+      <div class="form-group" *ngIf="routeType() === 'historic'">
+        <label class="label">Historic Site Radius: <span class="val accent">{{ downtownRadius() }}m</span></label>
+        <input id="radius-slider" type="range" class="slider" min="500" max="5000" step="100" [ngModel]="downtownRadius()" (ngModelChange)="downtownRadius.set($event)">
         <div class="slider-range"><span>500m</span><span>5km</span></div>
       </div>
 
       <!-- Novelty factor (novel mode only) -->
-      <div class="form-group" *ngIf="routeType === 'novel'">
-        <label class="label">Novelty Factor: <span class="val accent">{{ noveltyFactor }}</span></label>
-        <input id="novelty-slider" type="range" class="slider" min="0.5" max="20" step="0.5" [(ngModel)]="noveltyFactor">
+      <div class="form-group" *ngIf="routeType() === 'novel'">
+        <label class="label">Novelty Factor: <span class="val accent">{{ noveltyFactor() }}</span></label>
+        <input id="novelty-slider" type="range" class="slider" min="0.5" max="20" step="0.5" [ngModel]="noveltyFactor()" (ngModelChange)="noveltyFactor.set($event)">
         <div class="slider-range"><span>Slight</span><span>Max new roads</span></div>
       </div>
 
@@ -82,7 +82,7 @@ type RouteType = 'regular' | 'hilly' | 'historic' | 'novel';
       <p class="hint" *ngIf="!(state.activeCity$ | async)">
         Select a city or drop a pin above to begin.
       </p>
-      <p class="error" *ngIf="error">{{ error }}</p>
+      <p class="error" *ngIf="error()">{{ error() }}</p>
     </div>
   `,
   styles: [`
@@ -121,13 +121,13 @@ type RouteType = 'regular' | 'hilly' | 'historic' | 'novel';
   `]
 })
 export class RouteFormComponent {
-  routeType: RouteType = 'regular';
-  distance = 35;
-  tolerance = 0.25;
-  hillyFactor = 100;
-  downtownRadius = 1000;
-  noveltyFactor = 5.0;
-  error = '';
+  routeType = signal<RouteType>('regular');
+  distance = signal(35);
+  tolerance = signal(0.25);
+  hillyFactor = signal(100);
+  downtownRadius = signal(1000);
+  noveltyFactor = signal(5.0);
+  error = signal('');
 
   routeTypes = [
     { value: 'regular' as RouteType, label: 'Regular' },
@@ -143,17 +143,17 @@ export class RouteFormComponent {
     if (!city) return;
 
     const params: GenerateRequest = {
-      route_type: this.routeType,
-      distance_mi: this.distance,
-      tolerance: this.tolerance,
+      route_type: this.routeType(),
+      distance_mi: this.distance(),
+      tolerance: this.tolerance(),
       start_lat: city.lat,
       start_lng: city.lng,
-      hilly_factor: this.hillyFactor,
-      downtown_radius: this.downtownRadius,
-      novelty_factor: this.noveltyFactor,
+      hilly_factor: this.hillyFactor(),
+      downtown_radius: this.downtownRadius(),
+      novelty_factor: this.noveltyFactor(),
     };
 
-    this.error = '';
+    this.error.set('');
     this.state.setLoading(true);
     this.state.clearRoutes();
 
@@ -164,7 +164,7 @@ export class RouteFormComponent {
         this.pending.refresh();
       },
       error: err => {
-        this.error = err.error?.detail ?? 'Generation failed. Please try again.';
+        this.error.set(err.error?.detail ?? 'Generation failed. Please try again.');
         this.state.setLoading(false);
       }
     });

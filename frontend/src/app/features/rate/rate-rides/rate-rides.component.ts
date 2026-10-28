@@ -3,7 +3,7 @@
 //          switches to a read-only list of rides already rated. Nav/back-link
 //          now lives in AppShellComponent + RateShellComponent's sub-nav.
 
-import { Component, OnInit, AfterViewChecked, ElementRef, ViewChild } from '@angular/core';
+import { Component, OnInit, AfterViewChecked, ElementRef, ViewChild, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import * as L from 'leaflet';
@@ -34,11 +34,11 @@ function decodePolyline(encoded: string): [number, number][] {
     <div class="page">
       <div class="toolbar">
         <button class="toggle-view-btn" (click)="toggleView()" id="toggle-rated-view">
-          {{ viewMode === 'pending' ? 'View rated (' + ratedRides.length + ')' : '← Back to rating' }}
+          {{ viewMode() === 'pending' ? 'View rated (' + ratedRides().length + ')' : '← Back to rating' }}
         </button>
       </div>
 
-      <div class="model-bar" *ngIf="stats">
+      <div class="model-bar" *ngIf="stats() as stats">
         <span>Preference model v{{ stats.model_version }}</span>
         <span>{{ stats.total_ratings }} total ratings</span>
         <span *ngIf="stats.ratings_until_next_retrain > 0">
@@ -49,35 +49,35 @@ function decodePolyline(encoded: string): [number, number][] {
         </span>
       </div>
 
-      <ng-container *ngIf="viewMode === 'pending'">
+      <ng-container *ngIf="viewMode() === 'pending'">
         <div class="sync-row">
-          <button class="sync-btn" (click)="syncRides()" [disabled]="syncing" id="sync-rides-btn">
-            {{ syncing ? 'Syncing...' : 'Sync from Strava' }}
+          <button class="sync-btn" (click)="syncRides()" [disabled]="syncing()" id="sync-rides-btn">
+            {{ syncing() ? 'Syncing...' : 'Sync from Strava' }}
           </button>
-          <span class="hint" *ngIf="syncMsg">{{ syncMsg }}</span>
+          <span class="hint" *ngIf="syncMsg()">{{ syncMsg() }}</span>
         </div>
 
-        <div class="ride-card" *ngIf="currentRide && !done">
+        <div class="ride-card" *ngIf="!done() && currentRide() as ride">
         <div class="ride-header">
-          <h2 class="ride-name">{{ currentRide.name }}</h2>
-          <span class="ride-count">{{ currentIndex + 1 }} / {{ rides.length }}</span>
+          <h2 class="ride-name">{{ ride.name }}</h2>
+          <span class="ride-count">{{ currentIndex() + 1 }} / {{ rides().length }}</span>
         </div>
-        <div #rideMap class="ride-map" *ngIf="currentRide.polyline"></div>
+        <div #rideMap class="ride-map" *ngIf="ride.polyline"></div>
         <div class="ride-stats">
           <div class="stat-box">
-            <span class="stat-val">{{ currentRide.distance_mi | number:'1.1-1' }}</span>
+            <span class="stat-val">{{ ride.distance_mi | number:'1.1-1' }}</span>
             <span class="stat-label">miles</span>
           </div>
           <div class="stat-box">
-            <span class="stat-val">{{ currentRide.elevation_ft | number:'1.0-0' }}</span>
+            <span class="stat-val">{{ ride.elevation_ft | number:'1.0-0' }}</span>
             <span class="stat-label">ft gain</span>
           </div>
           <div class="stat-box">
-            <span class="stat-val">{{ currentRide.moving_time_min | number:'1.0-0' }}</span>
+            <span class="stat-val">{{ ride.moving_time_min | number:'1.0-0' }}</span>
             <span class="stat-label">min</span>
           </div>
           <div class="stat-box">
-            <span class="stat-val">{{ currentRide.avg_speed_mph | number:'1.1-1' }}</span>
+            <span class="stat-val">{{ ride.avg_speed_mph | number:'1.1-1' }}</span>
             <span class="stat-label">mph avg</span>
           </div>
         </div>
@@ -86,7 +86,7 @@ function decodePolyline(encoded: string): [number, number][] {
           <div class="rating-btns">
             <button *ngFor="let r of ratingValues"
               class="rating-btn"
-              [class.selected]="selectedRating === r"
+              [class.selected]="selectedRating() === r"
               [id]="'rating-' + r"
               (click)="rate(r)">
               {{ r }}
@@ -98,32 +98,32 @@ function decodePolyline(encoded: string): [number, number][] {
         </div>
       </div>
 
-        <div class="done-state" *ngIf="!loading && rides.length === 0 && !done">
+        <div class="done-state" *ngIf="!loading() && rides().length === 0 && !done()">
           <h2>No rides yet</h2>
           <p>Hit "Sync from Strava" to import your ride history.</p>
         </div>
 
-        <div class="done-state" *ngIf="done && rides.length === 0 && totalRides > 0">
+        <div class="done-state" *ngIf="done() && rides().length === 0 && totalRides() > 0">
           <h2>All rides rated!</h2>
           <p>Your routes will personalize as you add more data.</p>
           <a routerLink="/app" class="back-btn">Back to Route Builder</a>
         </div>
 
-        <div class="done-state" *ngIf="done && rides.length > 0">
+        <div class="done-state" *ngIf="done() && rides().length > 0">
           <h2>All done!</h2>
           <p>Your routes will personalize as you add more data.</p>
           <a routerLink="/app" class="back-btn">Back to Route Builder</a>
         </div>
 
-        <div class="loading-state" *ngIf="loading">
+        <div class="loading-state" *ngIf="loading()">
           <div class="spinner"></div>
           <span>Loading rides...</span>
         </div>
       </ng-container>
 
-      <div class="rated-list" *ngIf="viewMode === 'rated'">
-        <div class="rated-empty" *ngIf="ratedRides.length === 0">No rated rides yet.</div>
-        <div class="rated-row" *ngFor="let r of ratedRides">
+      <div class="rated-list" *ngIf="viewMode() === 'rated'">
+        <div class="rated-empty" *ngIf="ratedRides().length === 0">No rated rides yet.</div>
+        <div class="rated-row" *ngFor="let r of ratedRides()">
           <span class="rated-name">{{ r.name }}</span>
           <span class="rated-date">{{ r.date | date:'mediumDate' }}</span>
           <span class="rated-score">{{ r.user_rating }}/10</span>
@@ -217,52 +217,50 @@ export class RateRidesComponent implements OnInit, AfterViewChecked {
   @ViewChild('rideMap') mapEl!: ElementRef;
 
   allRides: Ride[] = [];
-  rides: Ride[] = [];
-  ratedRides: Ride[] = [];
-  totalRides = 0;
-  currentIndex = 0;
-  selectedRating: number | null = null;
-  stats: RatingStats | null = null;
-  loading = true;
-  syncing = false;
-  syncMsg = '';
-  done = false;
-  viewMode: 'pending' | 'rated' = 'pending';
+  rides = signal<Ride[]>([]);
+  ratedRides = signal<Ride[]>([]);
+  totalRides = signal(0);
+  currentIndex = signal(0);
+  selectedRating = signal<number | null>(null);
+  stats = signal<RatingStats | null>(null);
+  loading = signal(true);
+  syncing = signal(false);
+  syncMsg = signal('');
+  done = signal(false);
+  viewMode = signal<'pending' | 'rated'>('pending');
   ratingValues = [1,2,3,4,5,6,7,8,9,10];
 
   private map: L.Map | null = null;
   private renderedRideId: number | null = null;
   private submitting = false;
 
-  get currentRide(): Ride | null {
-    return this.rides[this.currentIndex] ?? null;
-  }
+  currentRide = computed<Ride | null>(() => this.rides()[this.currentIndex()] ?? null);
 
   constructor(private api: RouteApiService, private pending: PendingRatingsService) {}
 
   ngOnInit(): void {
-    this.loading = true;
-    this.done = false;
-    this.currentIndex = 0;
-    this.viewMode = 'pending';
-    this.api.getRatingStats().subscribe(s => this.stats = s);
+    this.loading.set(true);
+    this.done.set(false);
+    this.currentIndex.set(0);
+    this.viewMode.set('pending');
+    this.api.getRatingStats().subscribe(s => this.stats.set(s));
     this.api.getRides().subscribe({
       next: rides => {
         this.allRides = rides;
-        this.totalRides = rides.length;
-        this.rides = rides.filter(r => r.user_rating == null);
-        this.ratedRides = rides.filter(r => r.user_rating != null);
-        this.loading = false;
-        if (this.rides.length === 0 && this.totalRides > 0) {
-          this.done = true;
+        this.totalRides.set(rides.length);
+        this.rides.set(rides.filter(r => r.user_rating == null));
+        this.ratedRides.set(rides.filter(r => r.user_rating != null));
+        this.loading.set(false);
+        if (this.rides().length === 0 && this.totalRides() > 0) {
+          this.done.set(true);
         }
       },
-      error: () => { this.loading = false; }
+      error: () => this.loading.set(false)
     });
   }
 
   ngAfterViewChecked(): void {
-    const ride = this.currentRide;
+    const ride = this.currentRide();
     if (!ride || !ride.polyline || !this.mapEl) return;
     if (this.renderedRideId === ride.id) return;
     this.renderedRideId = ride.id;
@@ -295,31 +293,31 @@ export class RateRidesComponent implements OnInit, AfterViewChecked {
   }
 
   syncRides(): void {
-    this.syncing = true;
+    this.syncing.set(true);
     this.api.syncRides().subscribe({
       next: s => {
-        this.syncMsg = `${s.new_rides} new rides synced (${s.total_rides} total)`;
-        this.syncing = false;
+        this.syncMsg.set(`${s.new_rides} new rides synced (${s.total_rides} total)`);
+        this.syncing.set(false);
         this.renderedRideId = null;
         this.pending.refresh();
         this.ngOnInit();
       },
-      error: () => { this.syncing = false; }
+      error: () => this.syncing.set(false)
     });
   }
 
   rate(r: number): void {
     if (this.submitting) return;
     this.submitting = true;
-    this.selectedRating = r;
-    const ride = this.currentRide;
+    this.selectedRating.set(r);
+    const ride = this.currentRide();
     if (!ride) { this.submitting = false; return; }
 
     this.api.rateRide(ride.id, r).subscribe({
       next: stats => {
-        this.stats = stats;
+        this.stats.set(stats);
         this.pending.decrement();
-        this.ratedRides = [{ ...ride, user_rating: r }, ...this.ratedRides];
+        this.ratedRides.update(rated => [{ ...ride, user_rating: r }, ...rated]);
         setTimeout(() => {
           this.advance();
           this.submitting = false;
@@ -334,8 +332,8 @@ export class RateRidesComponent implements OnInit, AfterViewChecked {
   }
 
   toggleView(): void {
-    this.viewMode = this.viewMode === 'pending' ? 'rated' : 'pending';
-    if (this.viewMode === 'pending') {
+    this.viewMode.update(m => m === 'pending' ? 'rated' : 'pending');
+    if (this.viewMode() === 'pending') {
       this.map?.remove();
       this.map = null;
       this.renderedRideId = null;
@@ -343,12 +341,12 @@ export class RateRidesComponent implements OnInit, AfterViewChecked {
   }
 
   private advance(): void {
-    this.selectedRating = null;
+    this.selectedRating.set(null);
     this.renderedRideId = null;
-    if (this.currentIndex + 1 >= this.rides.length) {
-      this.done = true;
+    if (this.currentIndex() + 1 >= this.rides().length) {
+      this.done.set(true);
     } else {
-      this.currentIndex++;
+      this.currentIndex.update(i => i + 1);
     }
   }
 }

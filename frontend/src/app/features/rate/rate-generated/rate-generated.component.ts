@@ -5,7 +5,7 @@
 //          list of routes already rated. Nav now lives in AppShellComponent +
 //          RateShellComponent's sub-nav.
 
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { RouteApiService, RouteResult, RatingStats } from '../../../core/services/route-api.service';
@@ -19,11 +19,11 @@ import { PendingRatingsService } from '../../../core/services/pending-ratings.se
     <div class="page">
       <div class="toolbar">
         <button class="toggle-view-btn" (click)="toggleView()" id="toggle-rated-view-gen">
-          {{ viewMode === 'pending' ? 'View rated (' + ratedRoutes.length + ')' : '← Back to rating' }}
+          {{ viewMode() === 'pending' ? 'View rated (' + ratedRoutes().length + ')' : '← Back to rating' }}
         </button>
       </div>
 
-      <div class="model-bar" *ngIf="stats">
+      <div class="model-bar" *ngIf="stats() as stats">
         <span>Preference model v{{ stats.model_version }}</span>
         <span>{{ stats.total_ratings }} total ratings</span>
         <span *ngIf="stats.ratings_until_next_retrain > 0">
@@ -31,26 +31,26 @@ import { PendingRatingsService } from '../../../core/services/pending-ratings.se
         </span>
       </div>
 
-      <ng-container *ngIf="viewMode === 'pending'">
-        <div class="route-card" *ngIf="current && !done && !submitted">
+      <ng-container *ngIf="viewMode() === 'pending'">
+        <div class="route-card" *ngIf="!done() && !submitted() && current() as route">
           <div class="card-header">
             <div>
-              <h2 class="route-label">{{ current.route_type | titlecase }} Route</h2>
-              <span class="predicted" *ngIf="current.predicted_score != null">Predicted score: <strong>{{ current.predicted_score }}/10</strong></span>
+              <h2 class="route-label">{{ route.route_type | titlecase }} Route</h2>
+              <span class="predicted" *ngIf="route.predicted_score != null">Predicted score: <strong>{{ route.predicted_score }}/10</strong></span>
             </div>
-            <span class="route-count">{{ currentIndex + 1 }} / {{ routes.length }}</span>
+            <span class="route-count">{{ currentIndex() + 1 }} / {{ routes().length }}</span>
           </div>
           <div class="route-stats">
             <div class="stat-box">
-              <span class="stat-val">{{ current.distance_mi | number:'1.1-1' }}</span>
+              <span class="stat-val">{{ route.distance_mi | number:'1.1-1' }}</span>
               <span class="stat-label">miles</span>
             </div>
             <div class="stat-box">
-              <span class="stat-val">{{ current.elevation_ft | number:'1.0-0' }}</span>
+              <span class="stat-val">{{ route.elevation_ft | number:'1.0-0' }}</span>
               <span class="stat-label">ft gain</span>
             </div>
-            <div class="stat-box" *ngIf="current.novelty_pct != null">
-              <span class="stat-val">{{ current.novelty_pct | number:'1.0-0' }}%</span>
+            <div class="stat-box" *ngIf="route.novelty_pct != null">
+              <span class="stat-val">{{ route.novelty_pct | number:'1.0-0' }}%</span>
               <span class="stat-label">new roads</span>
             </div>
           </div>
@@ -59,7 +59,7 @@ import { PendingRatingsService } from '../../../core/services/pending-ratings.se
             <div class="rating-btns">
               <button *ngFor="let r of ratings"
                 class="rating-btn"
-                [class.selected]="selectedRating === r"
+                [class.selected]="selectedRating() === r"
                 [id]="'gen-rating-' + r"
                 (click)="rate(r)">{{ r }}</button>
             </div>
@@ -67,45 +67,45 @@ import { PendingRatingsService } from '../../../core/services/pending-ratings.se
           <button class="skip-btn" (click)="skip()" id="skip-gen-btn">Skip</button>
         </div>
 
-        <div class="comparison-card" *ngIf="submitted && lastRating != null">
+        <div class="comparison-card" *ngIf="submitted() && lastRating() != null">
           <h3>Rating Saved</h3>
           <div class="compare-row">
-            <ng-container *ngIf="lastPredicted != null">
+            <ng-container *ngIf="lastPredicted() != null">
               <div class="compare-item">
-                <span class="compare-val">{{ lastPredicted }}</span>
+                <span class="compare-val">{{ lastPredicted() }}</span>
                 <span class="compare-label">Predicted</span>
               </div>
               <div class="compare-arrow">&rarr;</div>
             </ng-container>
             <div class="compare-item">
-              <span class="compare-val actual">{{ lastRating }}</span>
+              <span class="compare-val actual">{{ lastRating() }}</span>
               <span class="compare-label">Your Rating</span>
             </div>
           </div>
-          <p class="compare-note" *ngIf="diff > 1.5">This difference will improve future routes.</p>
+          <p class="compare-note" *ngIf="diff() > 1.5">This difference will improve future routes.</p>
           <button class="next-btn" (click)="nextAfterSubmit()" id="next-route-btn">Next Route &rarr;</button>
         </div>
 
-        <div class="done-state" *ngIf="!loading && allRoutes.length === 0">
+        <div class="done-state" *ngIf="!loading() && allRoutes().length === 0">
           <h2>No generated routes yet</h2>
           <p>Generate a route from the Route Builder, then come back here after riding it.</p>
           <a routerLink="/app" class="back-btn">Back to Route Builder</a>
         </div>
 
-        <div class="done-state" *ngIf="done && !submitted && allRoutes.length > 0">
+        <div class="done-state" *ngIf="done() && !submitted() && allRoutes().length > 0">
           <h2>All routes reviewed</h2>
           <a routerLink="/app" class="back-btn">Back to Route Builder</a>
         </div>
 
-        <div class="loading-state" *ngIf="loading">
+        <div class="loading-state" *ngIf="loading()">
           <div class="spinner"></div>
           <span>Loading route history...</span>
         </div>
       </ng-container>
 
-      <div class="rated-list" *ngIf="viewMode === 'rated'">
-        <div class="rated-empty" *ngIf="ratedRoutes.length === 0">No rated routes yet.</div>
-        <div class="rated-row" *ngFor="let r of ratedRoutes">
+      <div class="rated-list" *ngIf="viewMode() === 'rated'">
+        <div class="rated-empty" *ngIf="ratedRoutes().length === 0">No rated routes yet.</div>
+        <div class="rated-row" *ngFor="let r of ratedRoutes()">
           <span class="rated-type">{{ r.route_type | titlecase }} · {{ r.distance_mi | number:'1.1-1' }} mi</span>
           <span class="rated-compare">
             <ng-container *ngIf="r.predicted_score != null">
@@ -203,57 +203,58 @@ import { PendingRatingsService } from '../../../core/services/pending-ratings.se
   `]
 })
 export class RateGeneratedComponent implements OnInit {
-  allRoutes: RouteResult[] = [];
-  routes: RouteResult[] = [];
-  ratedRoutes: RouteResult[] = [];
-  currentIndex = 0;
-  selectedRating: number | null = null;
-  stats: RatingStats | null = null;
-  loading = true;
-  done = false;
-  submitted = false;
+  allRoutes = signal<RouteResult[]>([]);
+  routes = signal<RouteResult[]>([]);
+  ratedRoutes = signal<RouteResult[]>([]);
+  currentIndex = signal(0);
+  selectedRating = signal<number | null>(null);
+  stats = signal<RatingStats | null>(null);
+  loading = signal(true);
+  done = signal(false);
+  submitted = signal(false);
   submitting = false;
-  lastRating: number | null = null;
-  lastPredicted: number | null = null;
-  viewMode: 'pending' | 'rated' = 'pending';
+  lastRating = signal<number | null>(null);
+  lastPredicted = signal<number | null>(null);
+  viewMode = signal<'pending' | 'rated'>('pending');
   ratings = [1,2,3,4,5,6,7,8,9,10];
 
-  get current(): RouteResult | null { return this.routes[this.currentIndex] ?? null; }
-  get diff(): number {
-    if (this.lastPredicted == null) return 0;
-    return Math.abs((this.lastRating ?? 0) - this.lastPredicted);
-  }
+  current = computed<RouteResult | null>(() => this.routes()[this.currentIndex()] ?? null);
+  diff = computed<number>(() => {
+    const predicted = this.lastPredicted();
+    if (predicted == null) return 0;
+    return Math.abs((this.lastRating() ?? 0) - predicted);
+  });
 
   constructor(private api: RouteApiService, private pending: PendingRatingsService) {}
 
   ngOnInit(): void {
-    this.viewMode = 'pending';
-    this.api.getRatingStats().subscribe(s => this.stats = s);
+    this.viewMode.set('pending');
+    this.api.getRatingStats().subscribe(s => this.stats.set(s));
     this.api.getRouteHistory().subscribe({
       next: routes => {
-        this.allRoutes = routes;
-        this.routes = routes.filter(r => r.user_rating == null);
-        this.ratedRoutes = routes.filter(r => r.user_rating != null);
-        this.loading = false;
-        this.done = this.routes.length === 0;
+        this.allRoutes.set(routes);
+        this.routes.set(routes.filter(r => r.user_rating == null));
+        this.ratedRoutes.set(routes.filter(r => r.user_rating != null));
+        this.loading.set(false);
+        this.done.set(this.routes().length === 0);
       },
-      error: () => { this.loading = false; }
+      error: () => this.loading.set(false)
     });
   }
 
   rate(r: number): void {
     if (this.submitting) return;
     this.submitting = true;
-    const route = this.current;
+    const route = this.current();
     if (!route) { this.submitting = false; return; }
-    this.lastPredicted = route.predicted_score;
-    this.lastRating = r;
+    this.lastPredicted.set(route.predicted_score);
+    this.lastRating.set(r);
     this.api.rateGeneratedRoute(route.id, r).subscribe({
       next: stats => {
-        this.stats = stats;
-        this.submitted = true;
+        this.stats.set(stats);
+        this.submitted.set(true);
         this.pending.decrement();
-        this.ratedRoutes = [{ ...route, user_rating: r }, ...this.ratedRoutes];
+        this.ratedRoutes.update(rated => [{ ...route, user_rating: r }, ...rated]);
         this.submitting = false;
       },
       error: () => { this.submitting = false; }
@@ -263,21 +264,21 @@ export class RateGeneratedComponent implements OnInit {
   skip(): void { this.advance(); }
 
   nextAfterSubmit(): void {
-    this.submitted = false;
-    this.lastRating = null;
+    this.submitted.set(false);
+    this.lastRating.set(null);
     this.advance();
   }
 
   toggleView(): void {
-    this.viewMode = this.viewMode === 'pending' ? 'rated' : 'pending';
+    this.viewMode.update(m => m === 'pending' ? 'rated' : 'pending');
   }
 
   private advance(): void {
-    this.selectedRating = null;
-    if (this.currentIndex + 1 >= this.routes.length) {
-      this.done = true;
+    this.selectedRating.set(null);
+    if (this.currentIndex() + 1 >= this.routes().length) {
+      this.done.set(true);
     } else {
-      this.currentIndex++;
+      this.currentIndex.update(i => i + 1);
     }
   }
 }

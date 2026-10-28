@@ -6,7 +6,7 @@
 
 import {
   Component, OnInit, OnDestroy, AfterViewInit,
-  ElementRef, ViewChild
+  ElementRef, ViewChild, signal
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Subscription } from 'rxjs';
@@ -35,7 +35,7 @@ const ROUTE_COLORS = ['#a8471f', '#5f7a52', '#b8862c', '#5c6b73', '#8a4a5c'];
   template: `
     <div class="map-wrap">
       <div #mapEl id="leaflet-map" class="map"></div>
-      <div class="idle-state" *ngIf="!hasRoutes && !(state.loading$ | async)">
+      <div class="idle-state" *ngIf="!hasRoutes() && !(state.loading$ | async)">
         <h2>Pick a starting point</h2>
         <p>Select a city, configure your route, and generate.</p>
       </div>
@@ -63,7 +63,7 @@ export class MapViewComponent implements AfterViewInit, OnDestroy {
   private siteMarkers: L.Marker[] = [];
   private startMarker?: L.Marker;
   private subs = new Subscription();
-  hasRoutes = false;
+  hasRoutes = signal(false);
 
   constructor(public state: RouteStateService) {}
 
@@ -122,7 +122,7 @@ export class MapViewComponent implements AfterViewInit, OnDestroy {
     this.routeLayers = [];
     this.siteMarkers.forEach(m => this.map.removeLayer(m));
     this.siteMarkers = [];
-    this.hasRoutes = routes.length > 0;
+    this.hasRoutes.set(routes.length > 0);
 
     const historicIcon = L.divIcon({
       className: 'historic-marker',

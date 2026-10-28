@@ -2,7 +2,7 @@
 // PURPOSE: Displays stats for a single generated route. Highlights when selected.
 //          Includes a GPX download button that streams the file from the backend.
 
-import { Component, Input } from '@angular/core';
+import { Component, computed, input, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouteResult, RouteApiService } from '../../../core/services/route-api.service';
 
@@ -13,45 +13,45 @@ const RANK_COLORS = ['#a8471f', '#5f7a52', '#b8862c', '#5c6b73', '#8a4a5c'];
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="card" [class.selected]="selected" [style.border-left-color]="rankColor">
+    <div class="card" [class.selected]="selected()" [style.border-left-color]="rankColor()">
       <div class="card-header">
-        <span class="rank" [style.color]="rankColor">#{{ rank }}</span>
-        <span class="score" *ngIf="route.predicted_score != null">{{ route.predicted_score }}<span class="score-max">/10</span></span>
+        <span class="rank" [style.color]="rankColor()">#{{ rank() }}</span>
+        <span class="score" *ngIf="route().predicted_score != null">{{ route().predicted_score }}<span class="score-max">/10</span></span>
       </div>
       <div class="stats">
         <div class="stat">
-          <span class="stat-val">{{ route.distance_mi }}</span>
+          <span class="stat-val">{{ route().distance_mi }}</span>
           <span class="stat-label">mi</span>
         </div>
         <div class="stat">
-          <span class="stat-val">{{ route.elevation_ft | number:'1.0-0' }}</span>
+          <span class="stat-val">{{ route().elevation_ft | number:'1.0-0' }}</span>
           <span class="stat-label">ft gain</span>
         </div>
-        <div class="stat" *ngIf="route.novelty_pct != null">
-          <span class="stat-val">{{ route.novelty_pct | number:'1.0-0' }}%</span>
+        <div class="stat" *ngIf="route().novelty_pct != null">
+          <span class="stat-val">{{ route().novelty_pct | number:'1.0-0' }}%</span>
           <span class="stat-label">new roads</span>
         </div>
       </div>
       <svg
-        *ngIf="elevationLine"
+        *ngIf="elevationLine()"
         class="elev-chart"
         viewBox="0 0 100 28"
         preserveAspectRatio="none"
         [attr.aria-label]="'Elevation profile'"
       >
-        <path [attr.d]="elevationArea" class="elev-area" />
-        <path [attr.d]="elevationLine" class="elev-line" [attr.stroke]="rankColor" />
+        <path [attr.d]="elevationArea()" class="elev-area" />
+        <path [attr.d]="elevationLine()" class="elev-line" [attr.stroke]="rankColor()" />
       </svg>
-      <div class="historic-sites" *ngIf="route.historic_sites?.length">
-        <span class="site-tag" *ngFor="let site of route.historic_sites">{{ site.name }}</span>
+      <div class="historic-sites" *ngIf="route().historic_sites?.length">
+        <span class="site-tag" *ngFor="let site of route().historic_sites">{{ site.name }}</span>
       </div>
       <button
         class="gpx-btn"
-        [id]="'gpx-btn-' + route.id"
+        [id]="'gpx-btn-' + route().id"
         (click)="downloadGpx($event)"
-        [disabled]="downloading"
+        [disabled]="downloading()"
       >
-        {{ downloading ? 'Downloading...' : 'Download GPX' }}
+        {{ downloading() ? 'Downloading...' : 'Download GPX' }}
       </button>
     </div>
   `,
@@ -100,18 +100,16 @@ const RANK_COLORS = ['#a8471f', '#5f7a52', '#b8862c', '#5c6b73', '#8a4a5c'];
   `]
 })
 export class RouteCardComponent {
-  @Input() route!: RouteResult;
-  @Input() rank = 1;
-  @Input() selected = false;
-  downloading = false;
+  route = input.required<RouteResult>();
+  rank = input(1);
+  selected = input(false);
+  downloading = signal(false);
 
-  get rankColor(): string {
-    return RANK_COLORS[(this.rank - 1) % RANK_COLORS.length];
-  }
+  rankColor = computed(() => RANK_COLORS[(this.rank() - 1) % RANK_COLORS.length]);
 
   /** SVG path for the elevation line, mapped into the 100x28 viewBox. */
-  get elevationLine(): string | null {
-    const prof = this.route.elevation_profile;
+  elevationLine = computed<string | null>(() => {
+    const prof = this.route().elevation_profile;
     if (!prof || prof.length < 2) return null;
 
     const maxD = prof[prof.length - 1][0] || 1;
@@ -127,30 +125,31 @@ export class RouteCardComponent {
         return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
       })
       .join(' ');
-  }
+  });
 
   /** Closed path filling the area under the elevation line. */
-  get elevationArea(): string | null {
-    const line = this.elevationLine;
+  elevationArea = computed<string | null>(() => {
+    const line = this.elevationLine();
     return line ? `${line} L100,28 L0,28 Z` : null;
-  }
+  });
 
   constructor(private api: RouteApiService) {}
 
   downloadGpx(event: Event): void {
     event.stopPropagation();
-    this.downloading = true;
-    this.api.downloadGpx(this.route.id).subscribe({
+    this.downloading.set(true);
+    const route = this.route();
+    this.api.downloadGpx(route.id).subscribe({
       next: blob => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `route_${this.route.distance_mi}mi_${this.rank}.gpx`;
+        a.download = `route_${route.distance_mi}mi_${this.rank()}.gpx`;
         a.click();
         URL.revokeObjectURL(url);
-        this.downloading = false;
+        this.downloading.set(false);
       },
-      error: () => { this.downloading = false; }
+      error: () => { this.downloading.set(false); }
     });
   }
 }

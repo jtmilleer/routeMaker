@@ -3,7 +3,7 @@
 //          Polls GET /api/graph/status/{city_key} every 3 seconds.
 //          Displays a progress bar and disappears when status === "ready".
 
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Subscription, switchMap, takeWhile, timer } from 'rxjs';
 import { RouteApiService } from '../../../core/services/route-api.service';
@@ -14,14 +14,14 @@ import { RouteStateService } from '../../../core/services/route-state.service';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="banner" *ngIf="(state.graphBuilding$ | async) && progress < 100">
+    <div class="banner" *ngIf="(state.graphBuilding$ | async) && progress() < 100">
       <div class="banner-content">
         <div class="banner-text">
           <strong>Building your map</strong>
-          <span>Downloading road network from OpenStreetMap — {{ progress }}% complete</span>
+          <span>Downloading road network from OpenStreetMap — {{ progress() }}% complete</span>
         </div>
         <div class="progress-bar-wrap">
-          <div class="progress-bar" [style.width.%]="progress"></div>
+          <div class="progress-bar" [style.width.%]="progress()"></div>
         </div>
       </div>
     </div>
@@ -42,7 +42,7 @@ import { RouteStateService } from '../../../core/services/route-state.service';
   `]
 })
 export class MapBuildingBannerComponent implements OnInit, OnDestroy {
-  progress = 0;
+  progress = signal(0);
   private pollSub?: Subscription;
   private cityKey = '';
 
@@ -76,7 +76,7 @@ export class MapBuildingBannerComponent implements OnInit, OnDestroy {
       // guarantees polling can never run forever.
       takeWhile(s => s.status === 'building', true),
     ).subscribe(status => {
-      this.progress = status.progress_pct;
+      this.progress.set(status.progress_pct);
       if (status.status !== 'building') {
         this.state.setGraphBuilding(false);
       }

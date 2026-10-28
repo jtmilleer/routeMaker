@@ -3,7 +3,7 @@
 //          that shows the Leaflet map for location picking. On custom selection,
 //          calls requestGraph() and transitions to the map-building-banner state.
 
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouteApiService, PresetCity } from '../../../core/services/route-api.service';
@@ -24,9 +24,9 @@ const CITY_DISPLAY_NAMES: Record<string, string> = {
       <label class="label">Start Location</label>
       <div class="city-grid">
         <button
-          *ngFor="let city of presets"
+          *ngFor="let city of presets()"
           class="city-btn"
-          [class.active]="activeKey === city.city_key"
+          [class.active]="activeKey() === city.city_key"
           [class.building]="city.status === 'building'"
           (click)="selectPreset(city)"
           [id]="'city-' + city.name"
@@ -38,7 +38,7 @@ const CITY_DISPLAY_NAMES: Record<string, string> = {
 
         <button
           class="city-btn custom-btn"
-          [class.active]="customMode"
+          [class.active]="customMode()"
           (click)="toggleCustomMode()"
           id="city-custom-pin"
         >
@@ -46,16 +46,16 @@ const CITY_DISPLAY_NAMES: Record<string, string> = {
         </button>
       </div>
 
-      <div class="custom-inputs" *ngIf="customMode">
+      <div class="custom-inputs" *ngIf="customMode()">
         <input
           id="custom-lat-input"
           type="number" placeholder="Latitude" step="0.0001"
-          class="coord-input" [(ngModel)]="customLat"
+          class="coord-input" [ngModel]="customLat()" (ngModelChange)="customLat.set($event)"
         >
         <input
           id="custom-lng-input"
           type="number" placeholder="Longitude" step="0.0001"
-          class="coord-input" [(ngModel)]="customLng"
+          class="coord-input" [ngModel]="customLng()" (ngModelChange)="customLng.set($event)"
         >
         <button class="set-btn" (click)="setCustomPin()" id="set-custom-pin-btn">Set Location</button>
         <p class="hint">Tip: right-click anywhere on Google Maps to copy coordinates.</p>
@@ -98,18 +98,18 @@ const CITY_DISPLAY_NAMES: Record<string, string> = {
   `]
 })
 export class CitySelectorComponent implements OnInit {
-  presets: PresetCity[] = [];
-  activeKey = '';
-  customMode = false;
-  customLat = 41.6543;
-  customLng = -91.5267;
+  presets = signal<PresetCity[]>([]);
+  activeKey = signal('');
+  customMode = signal(false);
+  customLat = signal(41.6543);
+  customLng = signal(-91.5267);
 
   constructor(private api: RouteApiService, public state: RouteStateService) {}
 
   ngOnInit(): void {
     this.api.getPresetCities().subscribe({
       next: cities => {
-        this.presets = cities;
+        this.presets.set(cities);
         // Auto-select Iowa City if ready
         const iowa = cities.find(c => c.name === 'iowa_city' && c.status === 'ready');
         if (iowa) this.selectPreset(iowa);
@@ -118,8 +118,8 @@ export class CitySelectorComponent implements OnInit {
   }
 
   selectPreset(city: PresetCity): void {
-    this.activeKey = city.city_key;
-    this.customMode = false;
+    this.activeKey.set(city.city_key);
+    this.customMode.set(false);
     this.state.setActiveCity({
       lat: city.lat,
       lng: city.lng,
@@ -129,25 +129,27 @@ export class CitySelectorComponent implements OnInit {
   }
 
   toggleCustomMode(): void {
-    this.customMode = !this.customMode;
-    if (this.customMode) this.activeKey = '';
+    this.customMode.update(on => !on);
+    if (this.customMode()) this.activeKey.set('');
   }
 
   setCustomPin(): void {
-    if (!this.customLat || !this.customLng) return;
+    const lat = this.customLat();
+    const lng = this.customLng();
+    if (!lat || !lng) return;
 
     // Request graph build and start polling
-    this.api.requestGraph(this.customLat, this.customLng).subscribe({
+    this.api.requestGraph(lat, lng).subscribe({
       next: ({ city_key }) => {
-        this.activeKey = city_key;
+        this.activeKey.set(city_key);
         this.state.setActiveCity({
-          lat: this.customLat,
-          lng: this.customLng,
+          lat,
+          lng,
           city_key,
-          display_name: `${this.customLat.toFixed(3)}, ${this.customLng.toFixed(3)}`,
+          display_name: `${lat.toFixed(3)}, ${lng.toFixed(3)}`,
         });
         this.state.setGraphBuilding(true);
-        this.customMode = false;
+        this.customMode.set(false);
       }
     });
   }
