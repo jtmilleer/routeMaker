@@ -11,7 +11,7 @@ from backend.core.db import AsyncSessionFactory, get_db
 from backend.core.security import get_current_user
 from backend.models.db_models import GeneratedRoute, Ride, RideRating, RouteFeedback, User
 from backend.models.schemas import PendingCounts, RideRatingRequest, RouteRatingRequest, RatingStats
-from backend.services import model_service
+from backend.services import model_service, strava_service
 
 router = APIRouter(prefix="/api/ratings", tags=["ratings"])
 
@@ -142,6 +142,7 @@ async def get_pending_counts(
         select(func.count()).select_from(Ride).where(
             Ride.athlete_id == athlete_id,
             Ride.activity_type == "ride",
+            Ride.distance_mi >= strava_service.MIN_RATED_MILES,
         )
     )).scalar_one()
 

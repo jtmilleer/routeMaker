@@ -11,7 +11,7 @@ from backend.core.db import get_db
 from backend.core.security import get_current_user
 from backend.models.db_models import Ride, RideRating
 from backend.models.schemas import RideOut, SyncSummary
-from backend.services import strava_service
+from backend.services import strava_service, track_service
 
 router = APIRouter(prefix="/api/rides", tags=["rides"])
 
@@ -54,7 +54,8 @@ async def sync_rides(
             db.add(ride)
             new_count += 1
 
-    await db.flush()
+    await db.commit()  # backfill reads these rows from its own session
+    track_service.start_backfill(athlete_id)
 
     total_result = await db.execute(
         select(Ride).where(Ride.athlete_id == athlete_id)
@@ -72,13 +73,15 @@ async def list_rides(
 ):
     """
     Return cached bike rides for this athlete, with user rating merged in.
-    Sorted by date descending (most recent first). Walks/runs are coverage-only
-    and excluded here so they're never rated or fed into the rating model.
+    Sorted by date descending (most recent first). Walks/runs and short rides are
+    coverage-only and excluded here so they're never rated or fed into the rating
+    model.
     """
     rides_result = await db.execute(
         select(Ride).where(
             Ride.athlete_id == athlete_id,
             Ride.activity_type == "ride",
+            Ride.distance_mi >= strava_service.MIN_RATED_MILES,
         )
         .order_by(Ride.date.desc())
         .limit(limit)

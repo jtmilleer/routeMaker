@@ -15,6 +15,7 @@ from backend.core.db import create_tables
 from backend.models import db_models  # noqa
 from backend.routers import auth, routes, rides, ratings, graph, coverage
 from backend.services.graph_service import seed_preset_cities
+from backend.services.track_service import resume_all_backfills
 
 # Configure root logging once for the whole app. Modules use
 # logging.getLogger("routemaker.<area>") instead of print().
@@ -33,6 +34,7 @@ async def lifespan(app: FastAPI):
     2. Migrate legacy graph/model files to the shared data location
     3. Create all DB tables (idempotent)
     4. Load/seed preset city graphs (Iowa City, Madison, Des Moines)
+    5. Resume any unfinished GPS track backfills
     """
     # Ensure data directories exist
     os.makedirs(settings.graphs_dir, exist_ok=True)
@@ -53,6 +55,8 @@ async def lifespan(app: FastAPI):
 
     await seed_preset_cities()
     logger.info("Preset city graphs loaded")
+
+    await resume_all_backfills()
 
     yield
 

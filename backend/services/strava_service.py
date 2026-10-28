@@ -20,10 +20,11 @@ STRAVA_AUTH_URL = "https://www.strava.com/oauth/authorize"
 STRAVA_TOKEN_URL = "https://www.strava.com/oauth/token"
 STRAVA_API_BASE = "https://www.strava.com/api/v3"
 
-# Minimum bike ride distance to import (mirrors the old MIN_MILES constant)
-MIN_MILES = 10.0
-# Foot activities are shorter — keep a low floor so neighborhood walks/runs count.
-WALK_MIN_MILES = 0.3
+# Every activity above a tiny floor is imported so coverage sees short trips too.
+MIN_ACTIVITY_MILES = 0.3
+# Rides shorter than this are coverage-only: hidden from rating so they never
+# reach the rating model (mirrors the old MIN_MILES constant in src/).
+MIN_RATED_MILES = 10.0
 
 # Strava sport_type -> our internal activity_type. Anything not listed is skipped.
 RIDE_SPORT_TYPES = {"Ride", "MountainBikeRide", "GravelRide", "EBikeRide", "VirtualRide"}
@@ -137,22 +138,21 @@ async def refresh_token_if_needed(athlete_id: int, db: AsyncSession) -> str:
 
 # Activity Fetching
 
-async def fetch_activities(access_token: str, max_rides: int = 400) -> list[dict]:
+async def fetch_activities(access_token: str) -> list[dict]:
     """
-    Page through /athlete/activities and collect cycling AND foot activities
-    (walk/run/hike). Other sport types are skipped.
-    Stops when an empty page is returned or max_rides is reached.
+    Page through all of /athlete/activities and collect cycling AND foot activities
+    (walk/run/hike). Other sport types are skipped. Stops at the first empty page.
     """
     headers = {"Authorization": f"Bearer {access_token}"}
     rides = []
     page = 1
 
     async with httpx.AsyncClient() as client:
-        while len(rides) < max_rides:
+        while True:
             resp = await client.get(
                 f"{STRAVA_API_BASE}/athlete/activities",
                 headers=headers,
-                params={"per_page": 50, "page": page},
+                params={"per_page": 200, "page": page},
             )
             resp.raise_for_status()
             batch = resp.json()
@@ -164,7 +164,75 @@ async def fetch_activities(access_token: str, max_rides: int = 400) -> list[dict
             rides.extend(kept)
             page += 1
 
-    return rides[:max_rides]
+    return rides
+
+
+# Full GPS tracks (streams API) + rate limiting
+
+# Headroom left under Strava's read limits so an interactive sync still works
+# while a track backfill is running.
+SHORT_LIMIT_HEADROOM = 10
+DAILY_LIMIT_HEADROOM = 50
+
+
+class StravaRateLimited(Exception):
+    """Strava returned 429. `retry_after` is how long to wait, in seconds."""
+
+    def __init__(self, retry_after: float):
+        super().__init__(f"Strava rate limit hit; retry in {retry_after:.0f}s")
+        self.retry_after = retry_after
+
+
+def _seconds_until_window_reset(daily: bool) -> float:
+    """Strava's short window resets on the quarter hour, the daily one at UTC
+    midnight. Adds a small buffer past the boundary."""
+    now = time.time()
+    period = 86400 if daily else 900
+    return period - (now % period) + 5
+
+
+def _rate_limit_wait(resp: httpx.Response) -> float:
+    """Seconds to pause before the next request, based on the usage headers, so
+    we back off before hitting the limit rather than after."""
+    limit = resp.headers.get("X-ReadRateLimit-Limit") or resp.headers.get("X-RateLimit-Limit")
+    usage = resp.headers.get("X-ReadRateLimit-Usage") or resp.headers.get("X-RateLimit-Usage")
+    if not limit or not usage:
+        return 0.0
+    try:
+        short_lim, daily_lim = (int(x) for x in limit.split(",")[:2])
+        short_use, daily_use = (int(x) for x in usage.split(",")[:2])
+    except ValueError:
+        return 0.0
+    if daily_use >= daily_lim - DAILY_LIMIT_HEADROOM:
+        return _seconds_until_window_reset(daily=True)
+    if short_use >= short_lim - SHORT_LIMIT_HEADROOM:
+        return _seconds_until_window_reset(daily=False)
+    return 0.0
+
+
+async def fetch_track(access_token: str, activity_id: int) -> tuple[list[tuple[float, float]], float]:
+    """
+    Fetch an activity's full-resolution GPS track via the streams API.
+    Returns (points, wait_s): points is [(lat, lng), ...] — empty when the activity
+    has no GPS (indoor/manual) or no longer exists — and wait_s is how long the
+    caller should pause before the next request to stay under the rate limit.
+    Raises StravaRateLimited on 429.
+    """
+    async with httpx.AsyncClient(timeout=30) as client:
+        resp = await client.get(
+            f"{STRAVA_API_BASE}/activities/{activity_id}/streams",
+            headers={"Authorization": f"Bearer {access_token}"},
+            params={"keys": "latlng", "key_by_type": "true"},
+        )
+    if resp.status_code == 429:
+        daily = _rate_limit_wait(resp) > 900
+        raise StravaRateLimited(_seconds_until_window_reset(daily=daily))
+    wait_s = _rate_limit_wait(resp)
+    if resp.status_code == 404:
+        return [], wait_s
+    resp.raise_for_status()
+    latlng = (resp.json().get("latlng") or {}).get("data") or []
+    return [(float(p[0]), float(p[1])) for p in latlng], wait_s
 
 
 def activities_to_df(activities: list[dict]) -> pd.DataFrame:
@@ -179,8 +247,7 @@ def activities_to_df(activities: list[dict]) -> pd.DataFrame:
         if category is None:
             continue
         distance_mi = round(a.get("distance", 0) * 0.000621371, 1)
-        min_miles = WALK_MIN_MILES if category == "walk" else MIN_MILES
-        if distance_mi < min_miles:
+        if distance_mi < MIN_ACTIVITY_MILES:
             continue
         rows.append({
             "id": a["id"],

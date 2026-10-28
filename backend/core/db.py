@@ -72,6 +72,7 @@ _ADDED_COLUMNS = {
     ],
     "rides": [
         ("activity_type", "VARCHAR(16) DEFAULT 'ride'"),
+        ("track_polyline", "TEXT"),
     ],
 }
 

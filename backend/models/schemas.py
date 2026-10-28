@@ -180,6 +180,7 @@ class CoverageResponse(BaseModel):
     coverage_pct: float    # ridden_mi / total_mi * 100
     total_mi: float        # total ridable street miles within the radius
     ridden_mi: float       # street miles the user has covered
+    tracks_pending: int    # activities whose full GPS track hasn't been fetched yet
     segments: list[CoverageSegment]
 
 

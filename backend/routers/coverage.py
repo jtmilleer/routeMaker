@@ -19,7 +19,7 @@ from backend.models.db_models import GeneratedRoute, Ride, User
 from backend.models.schemas import (
     CoverageResponse, CoverageRouteRequest, HomeBaseRequest, RouteResult,
 )
-from backend.services import coverage_service, graph_service
+from backend.services import coverage_service, graph_service, track_service
 
 router = APIRouter(prefix="/api/coverage", tags=["coverage"])
 _executor = ThreadPoolExecutor(max_workers=2)
@@ -27,17 +27,22 @@ _executor = ThreadPoolExecutor(max_workers=2)
 
 async def _load_rides_df(db: AsyncSession, athlete_id: int,
                          activity: str) -> pd.DataFrame:
-    """Load the user's activities (with polylines) as a DataFrame, filtered to the
-    chosen activity ("walk", "ride", or "both")."""
+    """Load the user's activities as a DataFrame, filtered to the chosen activity
+    ("walk", "ride", or "both"). Uses the full GPS track where it's been fetched,
+    falling back to Strava's summary polyline until the backfill reaches it."""
     stmt = select(Ride).where(Ride.athlete_id == athlete_id)
     if activity in ("walk", "ride"):
         stmt = stmt.where(Ride.activity_type == activity)
     result = await db.execute(stmt)
     rides = result.scalars().all()
-    return pd.DataFrame([
-        {"polyline": r.polyline, "distance_mi": r.distance_mi}
-        for r in rides if r.polyline
-    ], columns=["polyline", "distance_mi"])
+    rows = []
+    for r in rides:
+        if r.track_polyline == "":
+            continue  # no GPS (indoor/manual)
+        poly = r.track_polyline or r.polyline
+        if poly:
+            rows.append({"polyline": poly, "distance_mi": r.distance_mi})
+    return pd.DataFrame(rows, columns=["polyline", "distance_mi"])
 
 
 async def _require_home(db: AsyncSession, athlete_id: int) -> tuple[float, float]:
@@ -115,6 +120,7 @@ async def get_coverage(
         _executor, coverage_service.compute_coverage,
         G, rides_df, lat, lng, radius_mi, activity,
     )
+    result["tracks_pending"] = await track_service.pending_count(db, athlete_id)
     return result
 
 

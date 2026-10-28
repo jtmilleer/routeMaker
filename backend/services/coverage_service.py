@@ -16,6 +16,7 @@ import numpy as np
 import osmnx as ox
 import pandas as pd
 import polyline as pl
+import shapely
 
 from backend.models.schemas import RouteResult
 from backend.services import graph_service, model_service, route_service
@@ -32,6 +33,15 @@ SNAP_BUFFER_M = 250.0
 # Multiplier applied to already-ridden / already-covered edges when routing the
 # completionist loop, so the pathfinder strongly prefers fresh streets.
 COVERAGE_PENALTY = 6.0
+
+# Ride matching: a GPS point counts toward the nearest street within this distance.
+MATCH_MAX_DIST_M = 25.0
+# A street is ridden once one ride's matched points span this fraction of it.
+MIN_SPAN_FRACTION = 0.5
+# Ride points are interpolated to at most this spacing before matching.
+DENSIFY_STEP_M = 10.0
+# Unridden edges shorter than this between two ridden streets are filled in.
+SHORT_GAP_M = 20.0
 
 
 # Radius subgraph
@@ -81,21 +91,100 @@ def _rides_within_radius(rides_df: pd.DataFrame, lat: float, lng: float,
         mask = d <= limit_m
         if not mask.any():
             continue
-        in_pts = [(float(p[0]), float(p[1])) for p in arr[mask]]
-        rows.append({"polyline": pl.encode(in_pts),
-                     "distance_mi": r.get("distance_mi")})
+        # One row per contiguous run inside the area, so a ride that leaves and
+        # re-enters isn't joined by a straight line across the gap.
+        edges = np.flatnonzero(np.diff(np.concatenate([[0], mask.astype(int), [0]])))
+        for start, end in zip(edges[::2], edges[1::2]):
+            run = [(float(p[0]), float(p[1])) for p in arr[start:end]]
+            rows.append({"polyline": pl.encode(run),
+                         "distance_mi": r.get("distance_mi")})
     return pd.DataFrame(rows, columns=["polyline", "distance_mi"])
+
+
+def _densify(arr: np.ndarray) -> np.ndarray:
+    """Interpolate an (n, 2) metric point array so consecutive points are at most
+    DENSIFY_STEP_M apart. Full GPS tracks are already denser than this; it only
+    fills GPS dropouts and summary-polyline rides still awaiting their track."""
+    if len(arr) < 2:
+        return arr
+    seg = np.hypot(*(arr[1:] - arr[:-1]).T)
+    steps = np.maximum(1, np.ceil(seg / DENSIFY_STEP_M).astype(int))
+    seg_idx = np.repeat(np.arange(len(steps)), steps)
+    starts = np.repeat(np.cumsum(steps) - steps, steps)
+    frac = ((np.arange(steps.sum()) - starts) / np.repeat(steps, steps))[:, None]
+    out = arr[seg_idx] + (arr[seg_idx + 1] - arr[seg_idx]) * frac
+    return np.vstack([out, arr[-1:]])
+
+
+def _mark_ridden(H: nx.MultiDiGraph, rides_df: pd.DataFrame) -> None:
+    """
+    Tag each edge of H with ridden_count (and a base routing_weight). Stricter than
+    graph_service.mark_ridden_edges, which is tuned for sparse summary polylines
+    on the whole city graph: here each ride point is matched to the nearest street
+    within MATCH_MAX_DIST_M, and a street only counts as ridden when one ride's
+    matched points span MIN_SPAN_FRACTION of its length. That keeps points near an
+    intersection, or on a parallel trail, from claiming the neighboring street.
+    """
+    for _, _, d in H.edges(data=True):
+        d["ridden_count"] = 0
+        d["routing_weight"] = d["length"]
+    if H.number_of_nodes() == 0 or rides_df is None or len(rides_df) == 0:
+        return
+
+    # Local equirectangular projection to meters — accurate at neighborhood scale.
+    lat0 = float(np.mean([float(H.nodes[n]["y"]) for n in H.nodes]))
+    kx, ky = 111_320.0 * np.cos(np.radians(lat0)), 110_540.0
+
+    edges = list(_unique_undirected_edges(H))
+    lines = []
+    for u, v, data in edges:
+        if "geometry" in data:
+            xy = np.asarray(data["geometry"].coords, dtype=float)
+        else:
+            xy = np.array([[float(H.nodes[n]["x"]), float(H.nodes[n]["y"])] for n in (u, v)])
+        lines.append(shapely.linestrings(xy[:, 0] * kx, xy[:, 1] * ky))
+    lines = np.array(lines, dtype=object)
+    tree = shapely.STRtree(lines)
+
+    ridden = set()
+    for poly in rides_df["polyline"]:
+        pts = pl.decode(poly) if poly else []
+        if len(pts) < 2:
+            continue
+        ll = np.asarray(pts, dtype=float)
+        xy = _densify(np.column_stack([ll[:, 1] * kx, ll[:, 0] * ky]))
+        points = shapely.points(xy)
+        pt_idx, edge_idx = tree.query_nearest(points, max_distance=MATCH_MAX_DIST_M,
+                                              all_matches=False)
+        for e in np.unique(edge_idx):
+            if e in ridden:
+                continue
+            pos = shapely.line_locate_point(lines[e], points[pt_idx[edge_idx == e]])
+            if pos.max() - pos.min() >= MIN_SPAN_FRACTION * shapely.length(lines[e]):
+                ridden.add(int(e))
+
+    for e in ridden:
+        u, v, _ = edges[e]
+        for a, b in ((u, v), (v, u)):
+            for d in (H[a][b].values() if H.has_edge(a, b) else ()):
+                d["ridden_count"] += 1
+
+    # Short connector edges (e.g. the median split of a divided street at an
+    # intersection) between ridden streets rarely get a full span of points.
+    ridden_nodes = {n for u, v, d in H.edges(data=True)
+                    if d["ridden_count"] > 0 for n in (u, v)}
+    for u, v, d in H.edges(data=True):
+        if d["ridden_count"] == 0 and d.get("length", 0) < SHORT_GAP_M \
+                and u in ridden_nodes and v in ridden_nodes:
+            d["ridden_count"] += 1
 
 
 def _marked_subgraph(G: nx.MultiDiGraph, rides_df: pd.DataFrame,
                      lat: float, lng: float, radius_mi: float) -> nx.MultiDiGraph:
-    """Build the radius subgraph and tag each edge with ridden_count via the
-    existing matcher, using only ride points inside the area."""
+    """Build the radius subgraph and tag each edge with ridden_count, using only
+    ride points inside the area."""
     H = _radius_subgraph(G, lat, lng, radius_mi)
-    local_rides = _rides_within_radius(rides_df, lat, lng, radius_mi)
-    # mark_ridden_edges initializes ridden_count/routing_weight on every edge,
-    # so this is safe even when the user has no rides in the area.
-    graph_service.mark_ridden_edges(H, local_rides)
+    _mark_ridden(H, _rides_within_radius(rides_df, lat, lng, radius_mi))
     return H
 
 

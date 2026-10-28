@@ -75,6 +75,10 @@ const DEFAULT_CENTER: [number, number] = [41.6543, -91.5267];  // Iowa City
               <span class="stat-label">covered</span>
             </div>
             <p class="miles">{{ coverage()?.ridden_mi ?? 0 }} / {{ coverage()?.total_mi ?? 0 }} mi covered</p>
+            <p class="hint" *ngIf="coverage()?.tracks_pending">
+              Fetching full GPS tracks from Strava: {{ coverage()?.tracks_pending }} activities left.
+              Coverage gets more accurate as they arrive.
+            </p>
 
             <label class="field">
               <span>Radius: {{ radiusMi() }} mi</span>

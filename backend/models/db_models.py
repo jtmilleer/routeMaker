@@ -85,6 +85,10 @@ class Ride(Base):
     suffer_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     pr_count: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     polyline: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    # Full-resolution GPS track (encoded polyline) from Strava's streams API, used
+    # for coverage matching — summary `polyline` is too simplified for that.
+    # None = not fetched yet (see track_service backfill); "" = activity has no GPS.
+    track_polyline: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     start_lat: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     start_lng: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     synced_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())

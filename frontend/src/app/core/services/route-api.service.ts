@@ -104,6 +104,7 @@ export interface CoverageResponse {
   coverage_pct: number;
   total_mi: number;
   ridden_mi: number;
+  tracks_pending: number;  // activities still awaiting their full GPS track
   segments: CoverageSegment[];
 }
 
