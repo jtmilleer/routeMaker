@@ -47,12 +47,11 @@ async def _get_stats(athlete_id: int, db: AsyncSession) -> RatingStats:
     user = await db.get(User, athlete_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    until_retrain = RETRAIN_THRESHOLD - (user.total_ratings % RETRAIN_THRESHOLD)
     return RatingStats(
         total_ratings=user.total_ratings,
         model_version=user.model_version,
         has_model=model_service.has_model(athlete_id),
-        ratings_until_next_retrain=until_retrain if until_retrain != RETRAIN_THRESHOLD else 0,
+        ratings_until_next_retrain=RETRAIN_THRESHOLD - (user.total_ratings % RETRAIN_THRESHOLD),
         model_trained_at=user.model_trained_at,
     )
 

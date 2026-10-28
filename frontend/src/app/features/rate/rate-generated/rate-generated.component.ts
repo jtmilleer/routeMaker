@@ -26,9 +26,7 @@ import { PendingRatingsService } from '../../../core/services/pending-ratings.se
       <div class="model-bar" *ngIf="stats() as stats">
         <span>Preference model v{{ stats.model_version }}</span>
         <span>{{ stats.total_ratings }} total ratings</span>
-        <span *ngIf="stats.ratings_until_next_retrain > 0">
-          {{ stats.ratings_until_next_retrain }} until next retrain
-        </span>
+        <span>{{ stats.ratings_until_next_retrain }} until next retrain</span>
       </div>
 
       <ng-container *ngIf="viewMode() === 'pending'">

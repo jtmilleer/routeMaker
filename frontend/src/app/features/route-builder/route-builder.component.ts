@@ -42,15 +42,12 @@ import { LoadingOverlayComponent } from '../../shared/components/loading-overlay
             <ng-container *ngIf="lockedStats() as s">
               <div class="locked" id="generation-locked">
                 <h2 class="locked-title">Rate your rides first</h2>
-                <p class="locked-text" *ngIf="s.ratings_until_next_retrain > 0">
+                <p class="locked-text">
                   RouteMaker ranks routes with a model trained on your own ratings.
                   Rate <strong>{{ s.ratings_until_next_retrain }}</strong> more
                   {{ s.ratings_until_next_retrain === 1 ? 'ride' : 'rides' }} to unlock route generation.
                 </p>
-                <p class="locked-text" *ngIf="s.ratings_until_next_retrain === 0">
-                  Your model is training. Check back in a moment.
-                </p>
-                <div class="progress" *ngIf="s.ratings_until_next_retrain > 0">
+                <div class="progress">
                   <div class="progress-fill" [style.width.%]="progressPct(s)"></div>
                 </div>
                 <a routerLink="/app/rate/rides" class="locked-btn" id="go-rate-btn">Rate rides</a>

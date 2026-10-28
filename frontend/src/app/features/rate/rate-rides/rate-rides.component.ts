@@ -43,12 +43,7 @@ function decodePolyline(encoded: string): [number, number][] {
       <div class="model-bar" *ngIf="stats() as stats">
         <span>Preference model v{{ stats.model_version }}</span>
         <span>{{ stats.total_ratings }} total ratings</span>
-        <span *ngIf="stats.ratings_until_next_retrain > 0">
-          {{ stats.ratings_until_next_retrain }} ratings until next retrain
-        </span>
-        <span *ngIf="stats.ratings_until_next_retrain === 0" class="retrain-soon">
-          Retraining triggered!
-        </span>
+        <span>{{ stats.ratings_until_next_retrain }} ratings until next retrain</span>
       </div>
 
       <ng-container *ngIf="viewMode() === 'pending'">
@@ -146,7 +141,6 @@ function decodePolyline(encoded: string): [number, number][] {
       background: var(--bg-surface); border: 1px solid var(--border);
       border-radius: 10px; padding: 0.75rem 1rem; margin-bottom: 1rem; font-size: 0.82rem; color: var(--text-muted);
     }
-    .retrain-soon { color: var(--accent); font-weight: 600; }
 
     .sync-row { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
     .sync-btn {
