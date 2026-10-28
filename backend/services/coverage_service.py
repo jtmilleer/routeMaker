@@ -111,6 +111,18 @@ def _edge_polyline(G: nx.MultiDiGraph, u, v, data) -> str:
     return pl.encode(coords)
 
 
+def _is_countable(data) -> bool:
+    """
+    Whether an edge counts toward coverage. OSM `highway=service` ways (parking
+    aisles, driveways, drive-throughs, alleys, untagged lot lanes) outnumber real
+    streets in the bike network and would inflate the total, so they stay routable
+    but aren't counted. Simplified edges merged with a real street are kept.
+    """
+    hw = data.get("highway")
+    values = hw if isinstance(hw, list) else [hw]
+    return not all(v == "service" for v in values)
+
+
 def _unique_undirected_edges(G: nx.MultiDiGraph):
     """
     Yield (u, v, data) once per physical street, collapsing the MultiDiGraph's two
@@ -141,6 +153,8 @@ def compute_coverage(G: nx.MultiDiGraph, rides_df: pd.DataFrame,
     ridden_m = 0.0
     segments = []
     for u, v, data in _unique_undirected_edges(H):
+        if not _is_countable(data):
+            continue
         length = float(data.get("length", 0.0))
         ridden = data.get("ridden_count", 0) > 0
         total_m += length
@@ -215,7 +229,7 @@ def _build_coverage_loop(H_work: nx.MultiDiGraph, start, target_m: float, rng):
         # Candidate destinations: endpoints of still-uncovered streets.
         uncovered_nodes = set()
         for u, v, d in H_work.edges(data=True):
-            if d.get("ridden_count", 0) == 0:
+            if d.get("ridden_count", 0) == 0 and _is_countable(d):
                 uncovered_nodes.add(u)
                 uncovered_nodes.add(v)
         uncovered_nodes.discard(cur)
@@ -271,7 +285,8 @@ def generate_coverage_route(G: nx.MultiDiGraph, athlete_id: int,
         return []
 
     # Nothing left to discover?
-    if all(d.get("ridden_count", 0) > 0 for _, _, d in H_marked.edges(data=True)):
+    if all(d.get("ridden_count", 0) > 0 or not _is_countable(d)
+           for _, _, d in H_marked.edges(data=True)):
         return []
 
     start = ox.distance.nearest_nodes(H_marked, lng, lat)
@@ -286,8 +301,8 @@ def generate_coverage_route(G: nx.MultiDiGraph, athlete_id: int,
         rng = random.Random(seed)
         H_work = H_marked.copy()  # fresh covered-state per attempt
         for u, v, d in H_work.edges(data=True):
-            d["routing_weight"] = (d.get("length", 0.0) *
-                                   (COVERAGE_PENALTY if d.get("ridden_count", 0) > 0 else 1.0))
+            fresh = d.get("ridden_count", 0) == 0 and _is_countable(d)
+            d["routing_weight"] = d.get("length", 0.0) * (1.0 if fresh else COVERAGE_PENALTY)
 
         path = _build_coverage_loop(H_work, start, target_m, rng)
         if not path:
