@@ -60,24 +60,7 @@ function decodePolyline(encoded: string): [number, number][] {
           <span class="ride-count">{{ currentIndex() + 1 }} / {{ rides().length }}</span>
         </div>
         <div #rideMap class="ride-map" *ngIf="ride.polyline"></div>
-        <div class="ride-stats">
-          <div class="stat-box">
-            <span class="stat-val">{{ ride.distance_mi | number:'1.1-1' }}</span>
-            <span class="stat-label">miles</span>
-          </div>
-          <div class="stat-box">
-            <span class="stat-val">{{ ride.elevation_ft | number:'1.0-0' }}</span>
-            <span class="stat-label">ft gain</span>
-          </div>
-          <div class="stat-box">
-            <span class="stat-val">{{ ride.moving_time_min | number:'1.0-0' }}</span>
-            <span class="stat-label">min</span>
-          </div>
-          <div class="stat-box">
-            <span class="stat-val">{{ ride.avg_speed_mph | number:'1.1-1' }}</span>
-            <span class="stat-label">mph avg</span>
-          </div>
-        </div>
+        <ng-container *ngTemplateOutlet="rideStats; context: { $implicit: ride }"></ng-container>
         <div class="rating-row">
           <span class="rating-label">How enjoyable was this ride?</span>
           <div class="rating-btns">
@@ -120,13 +103,52 @@ function decodePolyline(encoded: string): [number, number][] {
 
       <div class="rated-list" *ngIf="viewMode() === 'rated'">
         <div class="rated-empty" *ngIf="ratedRides().length === 0">No rated rides yet.</div>
-        <div class="rated-row" *ngFor="let r of ratedRides()">
-          <span class="rated-name">{{ r.name }}</span>
-          <span class="rated-date">{{ r.date | date:'mediumDate' }}</span>
-          <span class="rated-score">{{ r.user_rating }}/10</span>
+        <div class="rated-item" *ngFor="let r of ratedRides(); trackBy: trackById" [class.expanded]="expandedId() === r.id">
+          <button class="rated-row" (click)="toggleExpand(r)" [attr.aria-expanded]="expandedId() === r.id">
+            <span class="rated-name">{{ r.name }}</span>
+            <span class="rated-date">{{ r.date | date:'mediumDate' }}</span>
+            <span class="rated-score">{{ r.user_rating }}/10</span>
+          </button>
+          <div class="rated-detail" *ngIf="expandedId() === r.id">
+            <div #rideMap class="ride-map" *ngIf="r.polyline"></div>
+            <ng-container *ngTemplateOutlet="rideStats; context: { $implicit: r }"></ng-container>
+            <div class="rating-row">
+              <span class="rating-label">Change your rating</span>
+              <div class="rating-btns">
+                <button *ngFor="let v of ratingValues"
+                  class="rating-btn"
+                  [class.selected]="r.user_rating === v"
+                  [disabled]="rerating()"
+                  (click)="rerate(r, v)">
+                  {{ v }}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
+
+    <ng-template #rideStats let-ride>
+      <div class="ride-stats">
+        <div class="stat-box">
+          <span class="stat-val">{{ ride.distance_mi | number:'1.1-1' }}</span>
+          <span class="stat-label">miles</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-val">{{ ride.elevation_ft | number:'1.0-0' }}</span>
+          <span class="stat-label">ft gain</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-val">{{ ride.moving_time_min | number:'1.0-0' }}</span>
+          <span class="stat-label">min</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-val">{{ ride.avg_speed_mph | number:'1.1-1' }}</span>
+          <span class="stat-label">mph avg</span>
+        </div>
+      </div>
+    </ng-template>
   `,
   styles: [`
     .page { min-height: 100%; background: var(--bg-primary); color: var(--text-primary); padding: 2rem; font-family: var(--font-primary); }
@@ -199,11 +221,17 @@ function decodePolyline(encoded: string): [number, number][] {
 
     .rated-list { max-width: 580px; margin: 0 auto; display: flex; flex-direction: column; gap: 0.5rem; }
     .rated-empty { color: var(--text-muted); text-align: center; padding: 2rem; }
+    .rated-item { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 10px; }
+    .rated-item.expanded { border-color: var(--surface-active-border); }
     .rated-row {
-      display: flex; justify-content: space-between; align-items: center;
-      background: var(--bg-surface); border: 1px solid var(--border); border-radius: 10px;
-      padding: 0.75rem 1rem; font-size: 0.85rem;
+      width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 1rem;
+      background: none; border: none; padding: 0.75rem 1rem; cursor: pointer; text-align: left;
+      font-size: 0.85rem; font-family: var(--font-primary);
     }
+    .rated-row:hover { background: var(--surface-hover); border-radius: 10px; }
+    .rated-name { flex: 1; }
+    .rated-detail { padding: 0 1rem 1rem; display: flex; flex-direction: column; gap: 1rem; }
+    .rating-btn:disabled { opacity: 0.5; cursor: not-allowed; }
     .rated-name { color: var(--text-primary); font-weight: 600; }
     .rated-date { color: var(--text-dim); }
     .rated-score { color: var(--accent); font-weight: 700; }
@@ -218,6 +246,8 @@ export class RateRidesComponent implements OnInit, AfterViewChecked {
   totalRides = signal(0);
   currentIndex = signal(0);
   selectedRating = signal<number | null>(null);
+  expandedId = signal<number | null>(null);
+  rerating = signal(false);
   stats = signal<RatingStats | null>(null);
   loading = signal(true);
   done = signal(false);
@@ -229,6 +259,12 @@ export class RateRidesComponent implements OnInit, AfterViewChecked {
   private submitting = false;
 
   currentRide = computed<Ride | null>(() => this.rides()[this.currentIndex()] ?? null);
+  // The ride whose map is on screen: the queue's current ride, or the expanded rated one.
+  shownRide = computed<Ride | null>(() =>
+    this.viewMode() === 'pending'
+      ? this.currentRide()
+      : this.ratedRides().find(r => r.id === this.expandedId()) ?? null
+  );
 
   constructor(
     private api: RouteApiService,
@@ -264,7 +300,7 @@ export class RateRidesComponent implements OnInit, AfterViewChecked {
   }
 
   ngAfterViewChecked(): void {
-    const ride = this.currentRide();
+    const ride = this.shownRide();
     if (!ride || !ride.polyline || !this.mapEl) return;
     if (this.renderedRideId === ride.id) return;
     this.renderedRideId = ride.id;
@@ -323,11 +359,39 @@ export class RateRidesComponent implements OnInit, AfterViewChecked {
 
   toggleView(): void {
     this.viewMode.update(m => m === 'pending' ? 'rated' : 'pending');
-    if (this.viewMode() === 'pending') {
-      this.map?.remove();
-      this.map = null;
-      this.renderedRideId = null;
-    }
+    this.expandedId.set(null);
+    this.clearMap();
+  }
+
+  toggleExpand(ride: Ride): void {
+    this.expandedId.set(this.expandedId() === ride.id ? null : ride.id);
+    // The map element is recreated per expansion, so always redraw.
+    this.clearMap();
+  }
+
+  /** Update an existing rating. Doesn't count toward the retrain threshold. */
+  rerate(ride: Ride, r: number): void {
+    if (this.rerating() || ride.user_rating === r) return;
+    this.rerating.set(true);
+    this.api.rateRide(ride.id, r).subscribe({
+      next: stats => {
+        this.stats.set(stats);
+        this.ratedRides.update(rated => rated.map(x => x.id === ride.id ? { ...x, user_rating: r } : x));
+        this.rerating.set(false);
+      },
+      error: () => this.rerating.set(false),
+    });
+  }
+
+  // Keeps the expanded row (and its map) in place when a re-rate replaces the ride object.
+  trackById(_: number, ride: Ride): number {
+    return ride.id;
+  }
+
+  private clearMap(): void {
+    this.map?.remove();
+    this.map = null;
+    this.renderedRideId = null;
   }
 
   private advance(): void {
