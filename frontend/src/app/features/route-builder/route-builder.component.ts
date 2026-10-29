@@ -14,6 +14,7 @@ import { RouteStateService } from '../../core/services/route-state.service';
 import { CitySelectorComponent } from '../../shared/components/city-selector/city-selector.component';
 import { RouteFormComponent } from './route-form/route-form.component';
 import { RouteResultsComponent } from './route-results/route-results.component';
+import { RouteDetailComponent } from './route-detail/route-detail.component';
 import { MapViewComponent } from '../map-view/map-view.component';
 import { LoadingOverlayComponent } from '../../shared/components/loading-overlay/loading-overlay.component';
 
@@ -26,6 +27,7 @@ import { LoadingOverlayComponent } from '../../shared/components/loading-overlay
     CitySelectorComponent,
     RouteFormComponent,
     RouteResultsComponent,
+    RouteDetailComponent,
     MapViewComponent,
     LoadingOverlayComponent,
   ],
@@ -60,6 +62,7 @@ import { LoadingOverlayComponent } from '../../shared/components/loading-overlay
       <main class="map-area">
         <app-loading-overlay *ngIf="state.loading$ | async"></app-loading-overlay>
         <app-map-view></app-map-view>
+        <app-route-detail></app-route-detail>
       </main>
     </div>
   `,

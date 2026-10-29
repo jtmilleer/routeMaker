@@ -27,6 +27,8 @@ const iconDefault = L.icon({
 L.Marker.prototype.options.icon = iconDefault;
 
 const ROUTE_COLORS = ['#a8471f', '#5f7a52', '#b8862c', '#5c6b73', '#8a4a5c'];
+// Extra top padding when fitting a route so it isn't hidden under the detail panel.
+const ROUTE_FIT_PADDING: L.FitBoundsOptions = { paddingTopLeft: [30, 200], paddingBottomRight: [30, 30] };
 
 @Component({
   selector: 'app-map-view',
@@ -71,8 +73,10 @@ export class MapViewComponent implements AfterViewInit, OnDestroy {
     this.map = L.map(this.mapEl.nativeElement, {
       center: [41.6543, -91.5267],
       zoom: 11,
-      zoomControl: true,
+      zoomControl: false,
     });
+    // Bottom-right so the route detail panel across the top doesn't cover it.
+    L.control.zoom({ position: 'bottomright' }).addTo(this.map);
 
     // Warm paper-toned tile layer (Field Guide theme)
     L.tileLayer(BASEMAP_TILE_URL, {
@@ -174,7 +178,7 @@ export class MapViewComponent implements AfterViewInit, OnDestroy {
     if (routes.length > 0 && routes[0].polyline) {
       const points = decodePolyline(routes[0].polyline);
       if (points.length) {
-        this.map.fitBounds(L.latLngBounds(points), { padding: [20, 20], animate: true });
+        this.map.fitBounds(L.latLngBounds(points), { ...ROUTE_FIT_PADDING, animate: true });
       }
     }
   }
@@ -204,7 +208,7 @@ export class MapViewComponent implements AfterViewInit, OnDestroy {
     if (selected) {
       const points = decodePolyline(selected.polyline);
       if (points.length) {
-        this.map.fitBounds(L.latLngBounds(points), { padding: [30, 30], animate: true });
+        this.map.fitBounds(L.latLngBounds(points), { ...ROUTE_FIT_PADDING, animate: true });
       }
     }
   }

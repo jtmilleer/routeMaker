@@ -1,10 +1,11 @@
 // LAYER: Component — Route Card
-// PURPOSE: Displays stats for a single generated route. Highlights when selected.
-//          Includes a GPX download button that streams the file from the backend.
+// PURPOSE: Compact summary of a single generated route in the sidebar list.
+//          Highlights when selected; the full detail (elevation profile, GPX
+//          download, historic sites) lives in RouteDetailComponent over the map.
 
-import { Component, computed, input, signal } from '@angular/core';
+import { Component, computed, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouteResult, RouteApiService } from '../../../core/services/route-api.service';
+import { RouteResult } from '../../../core/services/route-api.service';
 
 const RANK_COLORS = ['#a8471f', '#5f7a52', '#b8862c', '#5c6b73', '#8a4a5c'];
 
@@ -32,27 +33,6 @@ const RANK_COLORS = ['#a8471f', '#5f7a52', '#b8862c', '#5c6b73', '#8a4a5c'];
           <span class="stat-label">new roads</span>
         </div>
       </div>
-      <svg
-        *ngIf="elevationLine()"
-        class="elev-chart"
-        viewBox="0 0 100 28"
-        preserveAspectRatio="none"
-        [attr.aria-label]="'Elevation profile'"
-      >
-        <path [attr.d]="elevationArea()" class="elev-area" />
-        <path [attr.d]="elevationLine()" class="elev-line" [attr.stroke]="rankColor()" />
-      </svg>
-      <div class="historic-sites" *ngIf="route().historic_sites?.length">
-        <span class="site-tag" *ngFor="let site of route().historic_sites">{{ site.name }}</span>
-      </div>
-      <button
-        class="gpx-btn"
-        [id]="'gpx-btn-' + route().id"
-        (click)="downloadGpx($event)"
-        [disabled]="downloading()"
-      >
-        {{ downloading() ? 'Downloading...' : 'Download GPX' }}
-      </button>
     </div>
   `,
   styles: [`
@@ -73,83 +53,16 @@ const RANK_COLORS = ['#a8471f', '#5f7a52', '#b8862c', '#5c6b73', '#8a4a5c'];
     .score { font-family: var(--font-display); font-size: 1.3rem; font-weight: 700; color: var(--text-primary); }
     .score-max { font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-dim); font-weight: 400; }
 
-    .stats { display: flex; gap: 1rem; margin-bottom: 0.625rem; }
+    .stats { display: flex; gap: 1rem; }
     .stat { display: flex; flex-direction: column; }
     .stat-val { font-family: var(--font-mono); font-size: 0.9rem; font-weight: 700; color: var(--text-primary); }
     .stat-label { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; }
-
-    .elev-chart { width: 100%; height: 30px; display: block; margin-bottom: 0.625rem; overflow: visible; }
-    .elev-line { fill: none; stroke-width: 1.25; vector-effect: non-scaling-stroke; opacity: 0.9; }
-    .elev-area { fill: rgba(168, 71, 31, 0.15); stroke: none; }
-
-    .historic-sites { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-bottom: 0.5rem; }
-    .site-tag {
-      font-family: var(--font-mono); font-size: 0.68rem; background: rgba(95, 122, 82, 0.14); color: #45592f;
-      border: 1px solid rgba(95, 122, 82, 0.35); border-radius: 3px; padding: 0.2rem 0.5rem;
-      max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    }
-
-    .gpx-btn {
-      width: 100%; padding: 0.375rem; background: var(--bg-surface);
-      border: 1px solid var(--border); border-radius: 3px;
-      color: var(--text-muted); font-size: 0.75rem; font-family: var(--font-mono);
-      cursor: pointer; transition: all 0.15s;
-    }
-    .gpx-btn:hover:not(:disabled) { background: var(--surface-hover); color: var(--text-primary); }
-    .gpx-btn:disabled { opacity: 0.5; cursor: not-allowed; }
   `]
 })
 export class RouteCardComponent {
   route = input.required<RouteResult>();
   rank = input(1);
   selected = input(false);
-  downloading = signal(false);
 
   rankColor = computed(() => RANK_COLORS[(this.rank() - 1) % RANK_COLORS.length]);
-
-  /** SVG path for the elevation line, mapped into the 100x28 viewBox. */
-  elevationLine = computed<string | null>(() => {
-    const prof = this.route().elevation_profile;
-    if (!prof || prof.length < 2) return null;
-
-    const maxD = prof[prof.length - 1][0] || 1;
-    const elevs = prof.map(p => p[1]);
-    const minE = Math.min(...elevs);
-    const range = Math.max(...elevs) - minE || 1;
-    const W = 100, H = 28;
-
-    return prof
-      .map((p, i) => {
-        const x = (p[0] / maxD) * W;
-        const y = H - ((p[1] - minE) / range) * H;
-        return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
-      })
-      .join(' ');
-  });
-
-  /** Closed path filling the area under the elevation line. */
-  elevationArea = computed<string | null>(() => {
-    const line = this.elevationLine();
-    return line ? `${line} L100,28 L0,28 Z` : null;
-  });
-
-  constructor(private api: RouteApiService) {}
-
-  downloadGpx(event: Event): void {
-    event.stopPropagation();
-    this.downloading.set(true);
-    const route = this.route();
-    this.api.downloadGpx(route.id).subscribe({
-      next: blob => {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `route_${route.distance_mi}mi_${this.rank()}.gpx`;
-        a.click();
-        URL.revokeObjectURL(url);
-        this.downloading.set(false);
-      },
-      error: () => { this.downloading.set(false); }
-    });
-  }
 }
